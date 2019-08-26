@@ -1,0 +1,11 @@
+options:
+  enable-advanced-routing:
+    type: boolean
+    default: False
+    description: |
+      Wheter to use the custom routing configuration provided by the charm.
+  advanced-routing-config:
+    type: string
+    default: ""
+    description: |
+      @see example configuration in charm folder

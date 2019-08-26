@@ -1,0 +1,12 @@
+*.swp
+*~
+.idea
+.tox
+.vscode
+/builds/
+/deb_dist
+/dist
+/repo-info
+__pycache__
+
+
