@@ -1,7 +1,7 @@
 # Overview
 
 This subordinate charm allows for the configuration of simple policy routing rules on the deployed host
-and adding routing to configured services via a JSON file.
+and adding routing to configured services via a JSON.
 
 # Usage
 
@@ -9,7 +9,7 @@ and adding routing to configured services via a JSON file.
 # Build
 ```
 cd charm-advanced-routing
-charm build
+make build
 ```
 
 # Usage
@@ -23,7 +23,7 @@ juju add-relation ubuntu advanced-routing
 
 # Configuration                                                                 
 The user can configure the following parameters:
-* enable-advanced-routing: Enable routing. This requires for the charm to have the JSON file with routing information attached via: ```juju attach-resource advanced-routing routing_configuration=config.json```
+* enable-advanced-routing: Enable routing. This requires for the charm to have JSON with routing information configured: ```juju config advanced-routing --file path/to/your/config```
 
 A example_config.json file is provided with the codebase.
 
@@ -45,6 +45,5 @@ tox -e functional
 ```
 
 # Contact Information
-Diko Parvanov <diko.parvanov@canonical.com>
 David O Neill <david.o.neill@canonical.com>
 

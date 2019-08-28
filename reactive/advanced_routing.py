@@ -6,13 +6,13 @@ from charmhelpers.core.hookenv import (
 )
 
 from charms.reactive import (
-        hook,
-        set_flag,
-        when,
-        when_not,
+    hook,
+    set_flag,
+    when,
+    when_not,
 )
 
-from lib_routing import AdvancedRoutingHelper
+from AdvancedRoutingHelper import AdvancedRoutingHelper
 
 hooks = Hooks()
 advanced_routing = AdvancedRoutingHelper()

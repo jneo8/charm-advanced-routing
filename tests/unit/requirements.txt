@@ -1,1 +1,8 @@
 # Include python requirements here
+charmhelpers
+charms.reactive
+mock
+pytest
+pytest-cov
+os-client-config
+os-testr>=0.4.1

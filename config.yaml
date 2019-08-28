@@ -8,4 +8,10 @@ options:
     type: string
     default: ""
     description: |
-      @see example configuration in charm folder
+      A json array consisting of objects, e.g.
+      [ {
+          "type": "route", 
+          "net": "192.170.1.0/24", 
+          "device": "eth5"
+      }, { ... } ]
+      @ see exmaple_config.yaml for more examples

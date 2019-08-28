@@ -1,5 +1,5 @@
 name: advanced-routing
-maintainer: Diko Parvanov <diko.parvanov@canonical.com>
+maintainer: David O Neill <david.o.neill@canonical.com>
 summary: Routing configuration editor
 description: |
   This charm can be deployed alongside principle charms to enable custom

@@ -1,0 +1,45 @@
+series: bionic
+description: "charm-advanced-routing test bundle"
+machines:
+  "0":
+    constraints: "arch=amd64"
+relations:
+  - - "testhost:juju-info"
+    - "charm-advanced-routing:juju-info"
+applications:
+  testhost:
+    charm: "ubuntu"
+    options:
+      hostname: "testhost"
+    num_units: 1
+    to:
+      - "0"
+  charm-advanced-routing:
+    charm: "../.."
+    series: bionic
+    num_units: 0
+    options:
+      advanced-routing-config: |-
+        [ {
+            "type": "table",
+            "table": "SF1"
+        }, {
+            "type": "route",
+            "default_route": true,  
+            "net": "192.170.1.0/24",
+            "gateway": "10.191.86.2",      
+            "table": "SF1",
+            "metric": 101,
+            "device": "eth0"
+        }, {
+            "type": "route",
+            "net": "6.6.6.0/24",
+            "gateway": "10.191.86.2"
+        }, {
+            "type": "rule",
+            "from-net": "192.170.2.0/24",
+            "to-net": "192.170.2.0/24",
+            "table": "SF1",
+            "priority": 101
+        } ]
+      enable-advanced-routing: true

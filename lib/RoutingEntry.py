@@ -1,64 +1,87 @@
-import subprocess
-from charmhelpers.core import hookenv
+"""RoutingEntry Classes.
 
-#                        RoutingEntryType
-#             ---------------------------------------
-#            |                    |                  |
-#     RoutingEntryTable  RoutingEntryRoute  RoutingEntryRule
+This module contains the following abstract type and
+concrete implementations, thta model a routing table
+
+                       RoutingEntryType
+            ---------------------------------------
+           |                    |                  |
+     RoutingEntryTable  RoutingEntryRoute  RoutingEntryRule
+"""
+import subprocess
+
+from charmhelpers.core import hookenv
 
 
 class RoutingEntryType(object):
-    """Abstract type RoutingEntryType"""
+    """Abstract type RoutingEntryType."""
+
     entries = []  # static <RoutingEntryType>[]
     config = None  # config entry
 
     def __init__(self):
-        hookenv.log('Init %s' % self.__class__.__name__, level=hookenv.INFO)
+        """Constructor."""
+        hookenv.log('Init {}'.format(self.__class__.__name__), level=hookenv.INFO)
         pass
 
-    def apply_cmd(self, cmd, pipe=False):
-        """Runs a command"""
+    def exec_cmd(self, cmd, pipe=False):
+        """Runs a subprocess and returns True or False on success."""
         try:
-            hookenv.log('Subprocess check: {} {}'.format(self.__class__.__name__, cmd), level=hookenv.INFO)
             if pipe:
+                hookenv.log('Subprocess check shell: {} {}'.format(self.__class__.__name__, cmd), level=hookenv.INFO)
                 command = ' '.join(cmd)
                 ps = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                ps.communicate()[0]
+                ps.communicate()
                 return True if ps.returncode == 0 else False
             else:
+                hookenv.log('Subprocess check: {} {}'.format(self.__class__.__name__, cmd), level=hookenv.INFO)
                 subprocess.check_call(cmd)
                 return True
         except subprocess.CalledProcessError as error:
-            hookenv.log(error, "ERROR")
+            hookenv.log(error, level=hookenv.ERROR)
             return False
 
+    @staticmethod
+    def add_rule(newrule):
+        """Due to config-change/install etc hooks etc.
+
+        The validator may be called multiple times
+        The static list will get duplicate items added
+        """
+        for rule in RoutingEntryType.entries:
+            if rule.addline == newrule.addline:
+                return
+        RoutingEntryType.entries.append(newrule)
+
     def apply(self):
-        """not implemented, should override in strategy"""
+        """Not implemented, should override in strategy."""
         raise NotImplementedError
 
     def create_line(self):
-        """not implemented, should override in strategy"""
+        """Not implemented, should override in strategy."""
         raise NotImplementedError
 
     @property
-    def addLine(self):
-        """not implemented, should override in strategy"""
+    def addline(self):
+        """Not implemented, should override in strategy."""
         raise NotImplementedError
 
     @property
-    def removeLine(self):
-        """not implemented, should override in strategy"""
+    def removeline(self):
+        """Not implemented, should override in strategy."""
         raise NotImplementedError
 
 
 class RoutingEntryTable(RoutingEntryType):
-    """Concrete RoutingEntryType Strategy"""
+    """Concrete RoutingEntryType Strategy."""
+
     table_name_file = '/etc/iproute2/rt_tables.d/juju-managed.conf'
     table_index_counter = 100  # static
     tables = []
 
     def __init__(self, config):
-        hookenv.log('Created %s' % self.__class__.__name__, level=hookenv.INFO)
+        """Adds unique tables to the tables list."""
+        hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
 
@@ -66,9 +89,11 @@ class RoutingEntryTable(RoutingEntryType):
             RoutingEntryTable.tables.append(self.config['table'])
 
     def create_line(self):
-        pass
+        """Not implemented in this base class."""
+        raise NotImplementedError
 
     def apply(self):
+        """Opens iproute tables and adds the known list of tables into this file."""
         with open(RoutingEntryTable.table_name_file, 'w') as rt_table_file:
             num = RoutingEntryTable.table_index_counter
             for tbl in RoutingEntryTable.tables:
@@ -76,26 +101,30 @@ class RoutingEntryTable(RoutingEntryType):
                 num += 1
 
     @property
-    def addLine(self):
+    def addline(self):
+        """Returns the add line for the ifup script."""
         return "# Table: name {}\n".format(self.config['table'])
 
     @property
-    def removeLine(self):
-        line = "sudo ip route flush table {}\n".format(self.config['table'])
-        line += "sudo ip rule del table {}\n".format(self.config['table'])
+    def removeline(self):
+        """Returns the remove line for the ifdown script."""
+        line = "ip route flush table {}\n".format(self.config['table'])
+        line += "ip rule del table {}\n".format(self.config['table'])
         return line
 
 
 class RoutingEntryRoute(RoutingEntryType):
-    """Concrete RoutingEntryType Strategy"""
+    """Concrete RoutingEntryType Strategy."""
 
     def __init__(self, config):
-        hookenv.log('Created %s' % self.__class__.__name__, level=hookenv.INFO)
+        """Nothing special in this constructor."""
+        hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
 
     def create_line(self):
-        cmd = ["sudo", "ip", "route", "replace"]
+        """Creates and returns the command line for this rule object."""
+        cmd = ["ip", "route", "replace"]
 
         # default route in table
         if 'default_route' in self.config.keys():
@@ -126,27 +155,32 @@ class RoutingEntryRoute(RoutingEntryType):
         return cmd
 
     def apply(self):
-        super().apply_cmd(self.create_line())
+        """Applies this rule object to the system."""
+        super().exec_cmd(self.create_line())
 
     @property
-    def addLine(self):
+    def addline(self):
+        """Returns the add line for the ifup script."""
         return ' '.join(self.create_line()) + "\n"
 
     @property
-    def removeLine(self):
+    def removeline(self):
+        """Returns the remove line for the ifdown script."""
         return ' '.join(self.create_line()).replace(" replace ", " del ") + "\n"
 
 
 class RoutingEntryRule(RoutingEntryType):
-    """Concrete RoutingEntryType Strategy"""
+    """Concrete RoutingEntryType Strategy."""
 
     def __init__(self, config):
-        hookenv.log('Created %s' % self.__class__.__name__, level=hookenv.INFO)
+        """Nothing special in this constructor."""
+        hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
 
     def create_line(self):
-        cmd = ["sudo", "ip", "rule", "add", "from", self.config['from-net']]
+        """Creates and returns the command line for this rule object."""
+        cmd = ["ip", "rule", "add", "from", self.config['from-net']]
 
         if 'to-net' in self.config.keys():
             cmd.append("to")
@@ -165,20 +199,23 @@ class RoutingEntryRule(RoutingEntryType):
         return cmd
 
     def apply(self):
-        if self.is_duplicate() == False:
+        """Applies this rule object to the system."""
+        if self.is_duplicate() is False:
             # ip rule replace not supported, check for duplicates
-            super().apply_cmd(self.create_line())
+            super().exec_cmd(self.create_line())
 
     @property
-    def addLine(self):
+    def addline(self):
+        """Returns the add line for the ifup script."""
         return ' '.join(self.create_line()) + "\n"
 
     @property
-    def removeLine(self):
+    def removeline(self):
+        """Returns the remove line for the ifdown script."""
         return ' '.join(self.create_line()).replace(" add ", " del ") + "\n"
 
     def is_duplicate(self):
-        """Ip rule add does not prevent duplicates in older kernel versions"""
+        """Ip rule add does not prevent duplicates in older kernel versions."""
         # https://patchwork.ozlabs.org/patch/624553/
         parts = ' '.join(self.create_line()).split("add ")
-        return self.apply_cmd(["ip", "rule", "|", "grep", "\"" + parts[1] + "\""], True)
+        return self.exec_cmd(["ip", "rule", "|", "grep", "\"" + parts[1] + "\""], pipe=True)

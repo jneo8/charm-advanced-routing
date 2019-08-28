@@ -1,1 +1,3 @@
 # Include python requirements here
+charmhelpers
+charms.reactive
