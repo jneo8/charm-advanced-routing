@@ -1,11 +1,12 @@
+"""Main unit testing module."""
 import os
-import pytest
 import shutil
-import subprocess
-
 from unittest import mock
 
 import RoutingValidator
+
+import pytest
+
 
 class TestAdvancedRoutingHelper():
     """Main test class."""
@@ -18,9 +19,10 @@ class TestAdvancedRoutingHelper():
     test_script = 'test-script'
 
     def setup_class(self):
+        """Setup."""
         try:
             shutil.rmtree(self.test_dir)
-        except:
+        except OSError:
             pass
 
         os.makedirs(self.test_dir)
@@ -34,12 +36,11 @@ class TestAdvancedRoutingHelper():
         assert True
 
     def test_constructor(self, advanced_routing_helper):
-        """No test required"""
+        """No test required."""
         pass
 
     def test_pre_setup(self, advanced_routing_helper):
-        """Test pre_setup"""
-
+        """Test pre_setup."""
         test_obj = advanced_routing_helper
 
         test_obj.common_location = self.test_dir
@@ -48,7 +49,7 @@ class TestAdvancedRoutingHelper():
 
         try:
             os.remove(test_obj.policy_routing_service_path + 'charm-pre-install-policy-routing.service')
-        except:
+        except OSError:
             pass
 
         test_obj.pre_setup(test_obj)
@@ -66,20 +67,18 @@ class TestAdvancedRoutingHelper():
         try:
             with open(test_obj.policy_routing_service_path + 'charm-pre-install-policy-routing.service', "w+") as f:
                 f.write('dont care\n')
-        except:
+        except IOError:
             pass  # dont care
 
         with pytest.raises(Exception):
             test_obj.pre_setup(test_obj)
 
     def test_post_setup(self, advanced_routing_helper):
-        """Test post_setup"""
-        #test_obj = advanced_routing_helper
+        """Test post_setup."""
         assert True
 
     def test_setup(self, advanced_routing_helper):
-        """Test setup"""
-
+        """Test setup."""
         def noop():
             pass
 
@@ -95,37 +94,36 @@ class TestAdvancedRoutingHelper():
 
         assert os.path.exists(test_obj.ifup_path)
         assert os.path.exists(test_obj.ifdown_path)
-        
+
         assert True
 
     def test_apply_routes(self, advanced_routing_helper):
-        """Test post_setup"""
-        #test_obj = advanced_routing_helper
+        """Test post_setup."""
         assert True
 
     def test_remove_routes(self, advanced_routing_helper, mock_check_call):
-        """Test post_setup"""
+        """Test post_setup."""
         test_obj = advanced_routing_helper
 
-        with mock.patch('charmhelpers.core.host.lsb_release') as lsbrelBionic:
+        with mock.patch('charmhelpers.core.host.lsb_release') as lsbrelbionic:
             test_obj.netplan_up_path = self.test_netplanup_path
             test_obj.netplan_down_path = self.test_netplandown_path
-            lsbrelBionic.return_value = "bionic"
+            lsbrelbionic.return_value = "bionic"
             test_obj.remove_routes(test_obj)
 
-        with mock.patch('charmhelpers.core.host.lsb_release') as lsbrelArtful:
+        with mock.patch('charmhelpers.core.host.lsb_release') as lsbrelartful:
             test_obj.net_tools_up_path = self.test_ifup_path
             test_obj.net_tools_down_path = self.test_ifdown_path
-            lsbrelArtful.return_value = "artful"
+            lsbrelartful.return_value = "artful"
             test_obj.remove_routes(test_obj)
-            
-        assert os.path.exists(test_obj.ifup_path) == False
-        assert os.path.exists(test_obj.ifdown_path) == False
+
+        assert not os.path.exists(test_obj.ifup_path)
+        assert not os.path.exists(test_obj.ifdown_path)
 
         assert True
 
     def test_symlink_force(self, advanced_routing_helper):
-        """Test symlink_force"""
+        """Test symlink_force."""
         test_obj = advanced_routing_helper
 
         target = self.test_dir + 'testfile'
@@ -133,14 +131,14 @@ class TestAdvancedRoutingHelper():
 
         try:
             os.remove(target)
-        except:
+        except OSError:
             pass  # dont care
 
         # touch target file to link to
         try:
             with open(target, "w+") as f:
                 f.write('dont care\n')
-        except:
+        except IOError:
             pass  # dont care
 
         assert os.path.exists(target)

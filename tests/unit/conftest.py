@@ -2,12 +2,9 @@
 """Configurations for tests."""
 import subprocess
 import unittest.mock as mock
+
 import pytest
 
-from charmhelpers.core.host import (
-    CompareHostReleases,
-    lsb_release,
-)
 
 @pytest.fixture
 def mock_layers(monkeypatch):
@@ -70,10 +67,10 @@ def advanced_routing_helper(tmpdir, mock_hookenv_config, mock_charm_dir, monkeyp
 
     return helper
 
+
 @pytest.fixture
 def mock_check_call(monkeypatch):
     """Requests.get() mocked to return {'mock_key':'mock_response'}."""
-
     def mock_get(*args, **kwargs):
         return True
 

@@ -1,4 +1,6 @@
 """Reactive charm hooks."""
+from AdvancedRoutingHelper import AdvancedRoutingHelper
+
 from charmhelpers.core.hookenv import (
     Hooks,
     config,
@@ -12,7 +14,6 @@ from charms.reactive import (
     when_not,
 )
 
-from AdvancedRoutingHelper import AdvancedRoutingHelper
 
 hooks = Hooks()
 advanced_routing = AdvancedRoutingHelper()
@@ -22,9 +23,12 @@ advanced_routing = AdvancedRoutingHelper()
 def install_routing():
     """Install the charm."""
     if config('enable-advanced-routing'):
-        advanced_routing.setup()
-        advanced_routing.apply_routes()
-        set_flag('advanced-routing.installed')
+        try:
+            advanced_routing.setup()
+            advanced_routing.apply_routes()
+            set_flag('advanced-routing.installed')
+        except Exception as ex:
+            status_set('blocked', 'Error: {}'.format(str(ex)))
 
     status_set('active', 'Unit is ready.')
 
@@ -34,9 +38,12 @@ def upgrade_charm():
     """Handle resource-attach and config-changed events."""
     if config('enable-advanced-routing'):
         status_set('maintenance', 'Installing new static routes.')
-        advanced_routing.remove_routes()
-        advanced_routing.setup()
-        advanced_routing.apply_routes()
+        try:
+            advanced_routing.remove_routes()
+            advanced_routing.setup()
+            advanced_routing.apply_routes()
+        except Exception as ex:
+            status_set('blocked', 'Error: {}'.format(str(ex)))
 
     status_set('active', 'Unit is ready.')
 
@@ -46,11 +53,17 @@ def reconfigure_routing():
     """Handle routing configuration change."""
     if config('enable-advanced-routing'):
         status_set('maintenance', 'Installing routes.')
-        advanced_routing.remove_routes()
-        advanced_routing.setup()
-        advanced_routing.apply_routes()
+        try:
+            advanced_routing.remove_routes()
+            advanced_routing.setup()
+            advanced_routing.apply_routes()
+        except Exception as ex:
+            status_set('blocked', 'Error: {}'.format(str(ex)))
     else:
         status_set('maintenance', 'Removing routes.')
-        advanced_routing.remove_routes()
+        try:
+            advanced_routing.remove_routes()
+        except Exception as ex:
+            status_set('blocked', 'Error: {}'.format(str(ex)))
 
     status_set('active', 'Unit is ready.')
