@@ -22,7 +22,7 @@ def mock_layers(monkeypatch):
         else:
             return None
 
-    monkeypatch.setattr('AdvancedRoutingHelper.layer.options', options)
+    monkeypatch.setattr('advanced_routing_helper.layer.options', options)
 
 
 @pytest.fixture
@@ -42,28 +42,28 @@ def mock_hookenv_config(monkeypatch):
         # cfg['my-other-layer'] = 'mock'
         return cfg
 
-    monkeypatch.setattr('AdvancedRoutingHelper.hookenv.config', mock_config)
+    monkeypatch.setattr('advanced_routing_helper.hookenv.config', mock_config)
 
 
 @pytest.fixture
 def mock_remote_unit(monkeypatch):
     """Remote unit mock."""
-    monkeypatch.setattr('AdvancedRoutingHelper.hookenv.remote_unit', lambda: 'unit-mock/0')
+    monkeypatch.setattr('advanced_routing_helper.hookenv.remote_unit', lambda: 'unit-mock/0')
 
 
 @pytest.fixture
 def mock_charm_dir(monkeypatch):
     """Charm dir mock."""
-    monkeypatch.setattr('AdvancedRoutingHelper.hookenv.charm_dir', lambda: '/mock/charm/dir')
+    monkeypatch.setattr('advanced_routing_helper.hookenv.charm_dir', lambda: '/mock/charm/dir')
 
 
 @pytest.fixture
 def advanced_routing_helper(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
     """Routing fixture."""
-    from AdvancedRoutingHelper import AdvancedRoutingHelper
+    from advanced_routing_helper import AdvancedRoutingHelper
     helper = AdvancedRoutingHelper
 
-    monkeypatch.setattr('AdvancedRoutingHelper.AdvancedRoutingHelper', lambda: helper)
+    monkeypatch.setattr('advanced_routing_helper.AdvancedRoutingHelper', lambda: helper)
 
     return helper
 

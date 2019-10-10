@@ -1,7 +1,7 @@
 """RoutingEntry Classes.
 
-This module contains the following abstract type and
-concrete implementations, thta model a routing table
+This module contains the following abstract types and
+concrete implementations, that model a routing table
 
                        RoutingEntryType
             ---------------------------------------
@@ -9,11 +9,12 @@ concrete implementations, thta model a routing table
      RoutingEntryTable  RoutingEntryRoute  RoutingEntryRule
 """
 import subprocess
+from abc import ABCMeta, abstractmethod, abstractproperty
 
 from charmhelpers.core import hookenv
 
 
-class RoutingEntryType(object):
+class RoutingEntryType(metaclass=ABCMeta):
     """Abstract type RoutingEntryType."""
 
     entries = []  # static <RoutingEntryType>[]
@@ -22,7 +23,6 @@ class RoutingEntryType(object):
     def __init__(self):
         """Constructor."""
         hookenv.log('Init {}'.format(self.__class__.__name__), level=hookenv.INFO)
-        pass
 
     def exec_cmd(self, cmd, pipe=False):
         """Runs a subprocess and returns True or False on success."""
@@ -42,42 +42,58 @@ class RoutingEntryType(object):
             return False
 
     @staticmethod
-    def add_rule(newrule):
-        """Due to config-change/install etc hooks etc.
+    def add_entry(entry):
+        """Add routing entry type.
 
         The validator may be called multiple times
         The static list will get duplicate items added
+
+        :param entry: routing entry
         """
         for rule in RoutingEntryType.entries:
-            if rule.addline == newrule.addline:
+            if rule.addline == entry.addline:
                 return
-        RoutingEntryType.entries.append(newrule)
+        RoutingEntryType.entries.append(entry)
 
+    @abstractmethod
     def apply(self):
-        """Not implemented, should override in strategy."""
-        raise NotImplementedError
+        """Applies a rule object to the system.
 
+        Not implemented, should override in strategy.
+        """
+        pass
+
+    @abstractmethod
     def create_line(self):
-        """Not implemented, should override in strategy."""
-        raise NotImplementedError
+        """Creates and returns the command line for this rule object.
 
-    @property
+        Not implemented, should override in strategy.
+        """
+        pass
+
+    @abstractproperty
     def addline(self):
-        """Not implemented, should override in strategy."""
-        raise NotImplementedError
+        """Returns the add line for the ifup script.
 
-    @property
+        Not implemented, should override in strategy.
+        """
+        pass
+
+    @abstractproperty
     def removeline(self):
-        """Not implemented, should override in strategy."""
-        raise NotImplementedError
+        """Returns the remove line for the ifdown script.
+
+        Not implemented, should override in strategy.
+        """
+        pass
 
 
 class RoutingEntryTable(RoutingEntryType):
-    """Concrete RoutingEntryType Strategy."""
+    """RoutingEntryType used for routing tables."""
 
     table_name_file = '/etc/iproute2/rt_tables.d/juju-managed.conf'
     table_index_counter = 100  # static
-    tables = []
+    tables = set()
 
     def __init__(self, config):
         """Adds unique tables to the tables list."""
@@ -86,7 +102,7 @@ class RoutingEntryTable(RoutingEntryType):
         self.config = config
 
         if self.config['table'] not in RoutingEntryTable.tables:
-            RoutingEntryTable.tables.append(self.config['table'])
+            RoutingEntryTable.tables.add(self.config['table'])
 
     def create_line(self):
         """Not implemented in this base class."""
@@ -96,9 +112,8 @@ class RoutingEntryTable(RoutingEntryType):
         """Opens iproute tables and adds the known list of tables into this file."""
         with open(RoutingEntryTable.table_name_file, 'w') as rt_table_file:
             num = RoutingEntryTable.table_index_counter
-            for tbl in RoutingEntryTable.tables:
-                rt_table_file.write("{} {}\n".format(num, tbl))
-                num += 1
+            for num, tbl in enumerate(RoutingEntryTable.tables):
+                rt_table_file.write("{} {}\n".format(num + RoutingEntryTable.table_index_counter, tbl))
 
     @property
     def addline(self):
@@ -108,22 +123,21 @@ class RoutingEntryTable(RoutingEntryType):
     @property
     def removeline(self):
         """Returns the remove line for the ifdown script."""
-        line = "ip route flush table {}\n".format(self.config['table'])
-        line += "ip rule del table {}\n".format(self.config['table'])
-        return line
+        return ("ip route flush table {table}\n"
+                "ip rule del table {table}\n").format(table=self.config['table'])
 
 
 class RoutingEntryRoute(RoutingEntryType):
-    """Concrete RoutingEntryType Strategy."""
+    """RoutingEntryType used for routes."""
 
     def __init__(self, config):
-        """Nothing special in this constructor."""
+        """Object init function."""
         hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
 
     def create_line(self):
-        """Creates and returns the command line for this rule object."""
+        """Creates and returns the command line for this route object."""
         cmd = ["ip", "route", "replace"]
 
         # default route in table
@@ -170,10 +184,10 @@ class RoutingEntryRoute(RoutingEntryType):
 
 
 class RoutingEntryRule(RoutingEntryType):
-    """Concrete RoutingEntryType Strategy."""
+    """RoutingEntryType used for rules."""
 
     def __init__(self, config):
-        """Nothing special in this constructor."""
+        """Object init function."""
         hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config

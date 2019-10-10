@@ -8,18 +8,20 @@ import pprint
 import re
 import subprocess
 
-from RoutingEntry import (
+
+from charmhelpers.core import hookenv
+
+
+from routing_entry import (
     RoutingEntryRoute,
     RoutingEntryRule,
     RoutingEntryTable,
     RoutingEntryType,
 )
 
-from charmhelpers.core import hookenv
-
 
 class RoutingConfigValidator:
-    """Validates the enitre json configuration constructing model of rules."""
+    """Validates the entire json configuration constructing model of rules."""
 
     def __init__(self):
         """Init function."""
@@ -27,110 +29,105 @@ class RoutingConfigValidator:
 
         self.pattern = re.compile("^([a-zA-Z0-9-]+)$")
         self.tables = []
-        self.config = self.read_configurations()
-        self.verify_config()
+        self.config = []
 
-    def read_configurations(self):
+    def read_configurations(self, conf):
         """Read and parse the JSON configuration file."""
         json_decoded = []
-        conf = hookenv.config()
 
         if conf['advanced-routing-config']:
             try:
                 json_decoded = json.loads(conf['advanced-routing-config'])
                 hookenv.log('Read json config from juju config', level=hookenv.INFO)
-            except ValueError:
-                hookenv.status_set('blocked', 'JSON format invalid.')
-                raise Exception('JSON format invalid.')
+            except ValueError as err:
+                raise Exception('JSON format invalid, conf: {}, Error: {}'.format(conf['advanced-routing-config'], err))
         else:
-            hookenv.status_set('blocked', 'JSON invalid or not set in charm config')
-            raise Exception('JSON format invalid.')
-        return json_decoded
+            raise Exception("JSON data empty in charm config option 'advanced-routing-config'.")
+        self.config = json_decoded
 
     def verify_config(self):
         """Iterates the entries in the config checking each type for sanity."""
         hookenv.log('Verifying json config', level=hookenv.INFO)
         type_order = ['table', 'route', 'rule']
 
+        dispatch_table = {
+            'table': self.verify_table,
+            'route': self.verify_route,
+            'rule': self.verify_rule,
+        }
+
         for entry_type in type_order:
             # get all the tables together first, so that we can provide strict relations
             for conf in self.config:
+                if entry_type != conf['type']:
+                    continue
                 if 'type' not in conf:
-                    hookenv.status_set('blocked', 'Bad config: \'type\' not found in routing entry')
-                    hookenv.log('type not found in rule', level=hookenv.ERROR)
-                    raise Exception('type not found in rule')
-                if entry_type == "table" and entry_type == conf['type']:
-                    self.verify_table(conf)
-                if entry_type == "route" and entry_type == conf['type']:
-                    self.verify_route(conf)
-                if entry_type == "rule" and entry_type == conf['type']:
-                    self.verify_rule(conf)
+                    msg = "Bad config: Key 'type' not found in routing entry {}.".format(conf)
+                    hookenv.log(msg, level=hookenv.ERROR)
+                    hookenv.status_set('blocked', msg)
+                    raise Exception(msg)
+                # Lookup appropriate method and run if found
+                verifier = dispatch_table.get(conf['type'])
+                if verifier is None:
+                    msg = "Bad config: unknown type found: {} in routing entry {}".format(conf['type'], conf)
+                    hookenv.status_set('blocked', msg)
+                    raise Exception(msg)
+                verifier(conf)
 
     def verify_table(self, conf):
-        """Verify rules."""
-        hookenv.log('Verifying table \n{}'.format(pprint.pformat(conf)), level=hookenv.INFO)
+        """Verify tables."""
+        hookenv.log('Verifying table {}'.format(pprint.pformat(conf)), level=hookenv.INFO)
         if 'table' not in conf:
-            hookenv.status_set('blocked', 'Bad network config: \'table\' missing in rule')
-            raise Exception('Bad network config: \'table\' missing in rule')
+            raise Exception("Bad network config: 'table' missing in rule")
 
-        if self.pattern.match(conf['table']) is False:
-            hookenv.status_set('blocked', 'Bad network config: garbage table name in table [0-9a-zA-Z-]')
+        if not self.pattern.match(conf['table']):
             raise Exception('Bad network config: garbage table name in table [0-9a-zA-Z-]')
 
         if conf['table'] in self.tables:
-            hookenv.status_set('blocked', 'Bad network config: duplicate table name')
-            raise Exception('Bad network config: duplicate table name')
+            raise Exception('Bad network config: duplicate table name "{}"'.format(conf['table']))
 
         self.tables.append(conf['table'])
-        RoutingEntryType.add_rule(RoutingEntryTable(conf))
+        RoutingEntryType.add_entry(RoutingEntryTable(conf))
 
     def verify_route(self, conf):
         """Verify routes."""
-        hookenv.log('Verifying route \n{}'.format(pprint.pformat(conf)), level=hookenv.INFO)
+        hookenv.log('Verifying route {}'.format(pprint.pformat(conf)), level=hookenv.INFO)
         try:
             ipaddress.ip_address(conf['gateway'])
         except ValueError as error:
             hookenv.log('Bad gateway IP: {} - {}'.format(conf['gateway'], error), level=hookenv.INFO)
-            hookenv.status_set('blocked', 'Bad gateway IP: {} - {}'.format(conf['gateway'], error))
             raise Exception('Bad gateway IP: {} - {}'.format(conf['gateway'], error))
 
         try:
             ipaddress.ip_network(conf['net'])
         except ValueError as error:
             hookenv.log('Bad network config: {} - {}'.format(conf['net'], error), level=hookenv.INFO)
-            hookenv.status_set('blocked', 'Bad network config: {} - {}'.format(conf['net'], error))
             raise Exception('Bad network config: {} - {}'.format(conf['net'], error))
 
         if 'table' in conf:
-            if self.pattern.match(conf['table']) is False:
+            if not self.pattern.match(conf['table']):
                 hookenv.log('Bad network config: garbage table name in rule [0-9a-zA-Z]', level=hookenv.INFO)
-                hookenv.status_set('blocked', 'Bad network config')
                 raise Exception('Bad network config: garbage table name in rule [0-9a-zA-Z]')
             if conf['table'] not in self.tables:
                 hookenv.log('Bad network config: table reference not defined', level=hookenv.INFO)
-                hookenv.status_set('blocked', 'Bad network config')
                 raise Exception('Bad network config: table reference not defined')
 
         if 'default_route' in conf:
-            if isinstance(conf['default_route'], bool):
+            if not isinstance(conf['default_route'], bool):
                 hookenv.log('Bad network config: default_route should be bool', level=hookenv.INFO)
-                hookenv.status_set('blocked', 'Bad network config')
                 raise Exception('Bad network config: default_route should be bool')
             if 'table' not in conf:
                 hookenv.log('Bad network config: replacing the default route in main table blocked', level=hookenv.INFO)
-                hookenv.status_set('blocked', 'Bad network config')
                 raise Exception('Bad network config: replacing the default route in main table blocked')
 
         if 'device' in conf:
-            if self.pattern.match(conf['device']) is False:
+            if not self.pattern.match(conf['device']):
                 hookenv.log('Bad network config: garbage device name in rule [0-9a-zA-Z-]', level=hookenv.INFO)
-                hookenv.status_set('blocked', 'Bad network config')
                 raise Exception('Bad network config: garbage device name in rule [0-9a-zA-Z-]')
             try:
                 subprocess.check_call(["ip", "link", "show", conf['device']])
             except subprocess.CalledProcessError as error:
                 hookenv.log('Device {} does not exist'.format(conf['device']), level=hookenv.INFO)
-                hookenv.status_set('blocked', 'Bad network config')
                 raise Exception('Device {} does not exist, {}'.format(conf['device'], error))
 
         if 'metric' in conf:
@@ -138,45 +135,38 @@ class RoutingConfigValidator:
                 int(conf['metric'])
             except ValueError:
                 hookenv.log('Bad network config: metric expected to be integer', level=hookenv.INFO)
-                hookenv.status_set('blocked', 'Bad network config')
                 raise Exception('Bad network config: metric expected to be integer')
 
-        RoutingEntryType.add_rule(RoutingEntryRoute(conf))
+        RoutingEntryType.add_entry(RoutingEntryRoute(conf))
 
     def verify_rule(self, conf):
         """Verify rules."""
-        hookenv.log('Verifying rule \n{}'.format(pprint.pformat(conf)), level=hookenv.INFO)
+        hookenv.log('Verifying rule {}'.format(pprint.pformat(conf)), level=hookenv.INFO)
 
         try:
             ipaddress.ip_network(conf['from-net'])
         except ValueError as error:
-            hookenv.status_set('blocked', 'Bad network config: {} - {}'.format(conf['from-net'], error))
             raise Exception('Bad network config: {} - {}'.format(conf['from-net'], error))
 
         if 'to-net' in conf:
             try:
                 ipaddress.ip_network(conf['to-net'])
             except ValueError as error:
-                hookenv.status_set('blocked', 'Bad network config: {} - {}'.format(conf['to-net'], error))
                 raise Exception('Bad network config: {} - {}'.format(conf['to-net'], error))
 
         if 'table' not in conf:
-            hookenv.status_set('blocked', 'Bad network config: \'table\' missing in rule')
-            raise Exception('Bad network config: \'table\' missing in rule')
+            raise Exception("Bad network config: 'table' missing in rule")
 
         if conf['table'] not in self.tables:
-            hookenv.status_set('blocked', 'Bad network config: table reference not defined')
             raise Exception('Bad network config: table reference not defined')
 
-        if self.pattern.match(conf['table']) is False:
-            hookenv.status_set('blocked', 'Bad network config: garbage table name in rule [0-9a-zA-Z-]')
+        if not self.pattern.match(conf['table']):
             raise Exception('Bad network config: garbage table name in rule [0-9a-zA-Z-]')
 
         if 'priority' in conf:
             try:
                 int(conf['priority'])
             except ValueError:
-                hookenv.status_set('blocked', 'Bad network config: priority expected to be integer')
                 raise Exception('Bad network config: priority expected to be integer')
 
-        RoutingEntryType.add_rule(RoutingEntryRule(conf))
+        RoutingEntryType.add_entry(RoutingEntryRule(conf))

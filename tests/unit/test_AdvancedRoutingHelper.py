@@ -3,9 +3,11 @@ import os
 import shutil
 from unittest import mock
 
-import RoutingValidator
 
 import pytest
+
+
+import routing_validator
 
 
 class TestAdvancedRoutingHelper():
@@ -18,26 +20,26 @@ class TestAdvancedRoutingHelper():
     test_netplandown_path = test_dir + 'symlink_test/netplandown/'
     test_script = 'test-script'
 
-    def setup_class(self):
+    @classmethod
+    def setUp(cls):
         """Setup."""
+        os.makedirs(cls.test_dir)
+        os.makedirs(cls.test_ifdown_path)
+        os.makedirs(cls.test_ifup_path)
+        os.makedirs(cls.test_netplandown_path)
+        os.makedirs(cls.test_netplanup_path)
+
+    @classmethod
+    def tearDown(cls):
+        """Teardown method."""
         try:
-            shutil.rmtree(self.test_dir)
+            shutil.rmtree(cls.test_dir)
         except OSError:
             pass
-
-        os.makedirs(self.test_dir)
-        os.makedirs(self.test_ifdown_path)
-        os.makedirs(self.test_ifup_path)
-        os.makedirs(self.test_netplandown_path)
-        os.makedirs(self.test_netplanup_path)
 
     def test_pytest(self, advanced_routing_helper):
         """Simple pytest sanity test."""
         assert True
-
-    def test_constructor(self, advanced_routing_helper):
-        """No test required."""
-        pass
 
     def test_pre_setup(self, advanced_routing_helper):
         """Test pre_setup."""
@@ -73,10 +75,6 @@ class TestAdvancedRoutingHelper():
         with pytest.raises(Exception):
             test_obj.pre_setup(test_obj)
 
-    def test_post_setup(self, advanced_routing_helper):
-        """Test post_setup."""
-        assert True
-
     def test_setup(self, advanced_routing_helper):
         """Test setup."""
         def noop():
@@ -89,17 +87,11 @@ class TestAdvancedRoutingHelper():
         test_obj.ifdown_path = '{}if-down/{}'.format(self.test_dir, self.test_script)
 
         test_obj.post_setup = noop
-        RoutingValidator.RoutingConfigValidator.__init__ = mock.Mock(return_value=None)
+        routing_validator.RoutingConfigValidator.__init__ = mock.Mock(return_value=None)
         test_obj.setup(test_obj)
 
         assert os.path.exists(test_obj.ifup_path)
         assert os.path.exists(test_obj.ifdown_path)
-
-        assert True
-
-    def test_apply_routes(self, advanced_routing_helper):
-        """Test post_setup."""
-        assert True
 
     def test_remove_routes(self, advanced_routing_helper, mock_check_call):
         """Test post_setup."""
@@ -119,8 +111,6 @@ class TestAdvancedRoutingHelper():
 
         assert not os.path.exists(test_obj.ifup_path)
         assert not os.path.exists(test_obj.ifdown_path)
-
-        assert True
 
     def test_symlink_force(self, advanced_routing_helper):
         """Test symlink_force."""

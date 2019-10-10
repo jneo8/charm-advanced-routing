@@ -2,7 +2,6 @@ help:
 	@echo "This project supports the following targets"
 	@echo ""
 	@echo " make help - show this text"
-	@echo " make submodules - make sure that the submodules are up-to-date"
 	@echo " make lint - run flake8"
 	@echo " make test - run the unittests and lint"
 	@echo " make unittest - run the tests defined in the unittest subdirectory"
@@ -10,10 +9,6 @@ help:
 	@echo " make release - build the charm"
 	@echo " make clean - remove unneeded files"
 	@echo ""
-
-submodules:
-	@echo "Cloning submodules"
-	@git submodule update --init --recursive
 
 lint:
 	@echo "Running flake8"
@@ -43,7 +38,7 @@ clean:
 	@echo "Cleaning files"
 	@if [ -d .tox ] ; then rm -r .tox ; fi
 	@if [ -d .pytest_cache ] ; then rm -r .pytest_cache ; fi
-	@find . -iname __pycache__ -exec rm -r {} +
+	@find . -type d -name '__pycache__' -prune -exec rm -rf "{}"
 
 # The targets below don't depend on a file
-.PHONY: lint test unittest functional build release clean help submodules
+.PHONY: lint test unittest functional build release clean help

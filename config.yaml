@@ -6,7 +6,7 @@ options:
       Wheter to use the custom routing configuration provided by the charm.
   advanced-routing-config:
     type: string
-    default: ""
+    default: "[]"
     description: |
       A json array consisting of objects, e.g.
       [ {

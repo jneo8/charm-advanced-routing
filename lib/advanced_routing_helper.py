@@ -3,9 +3,6 @@ import errno
 import os
 import subprocess
 
-from RoutingEntry import RoutingEntryType
-
-from RoutingValidator import RoutingConfigValidator
 
 from charmhelpers.core import hookenv
 from charmhelpers.core.host import (
@@ -14,16 +11,22 @@ from charmhelpers.core.host import (
 )
 
 
+from routing_entry import RoutingEntryType
+
+from routing_validator import RoutingConfigValidator
+
+
 class AdvancedRoutingHelper:
     """Helper class for routing."""
 
     if_script = '95-juju_routing'
-    common_location = '/usr/local/sbin/'  # trailing slash
+    common_location = '/usr/local/lib/juju-charm-advanced-routing/'  # trailing slash
     net_tools_up_path = '/etc/network/if-up.d/'  # trailing slash
     net_tools_down_path = '/etc/network/if-down.d/'  # trailing slash
     netplan_up_path = '/etc/networkd-dispatcher/routable.d/'  # trailing slash
     netplan_down_path = '/etc/networkd-dispatcher/off.d/'  # trailing slash
     policy_routing_service_path = '/etc/systemd/system/'  # trailing slash
+    table_name_file = '/etc/iproute2/rt_tables.d/juju-managed.conf'
     ifup_path = None
     ifdown_path = None
 
@@ -64,13 +67,16 @@ class AdvancedRoutingHelper:
 
     def setup(self):
         """Modify the interfaces configurations."""
-        RoutingConfigValidator()
+        # Validate configuration options first
+        conf = hookenv.config()
+        routing_validator = RoutingConfigValidator()
+        routing_validator.read_configurations(conf)
+        routing_validator.verify_config()
 
         hookenv.log('Writing {}'.format(self.ifup_path), level=hookenv.INFO)
         # Modify if-up.d
         with open(self.ifup_path, 'w') as ifup:
-            ifup.write("# This file is managed by Juju.\n")
-            ifup.write("ip route flush cache\n")
+            ifup.write("# This file is managed by Juju.\nip route flush cache\n")
             for entry in RoutingEntryType.entries:
                 ifup.write(entry.addline)
             os.chmod(self.ifup_path, 0o755)
@@ -86,7 +92,7 @@ class AdvancedRoutingHelper:
 
         self.post_setup()
 
-    def apply_routes(self):
+    def apply_config(self):
         """Apply the new routes to the system."""
         hookenv.log('Applying routing rules', level=hookenv.INFO)
         for entry in RoutingEntryType.entries:
@@ -97,16 +103,20 @@ class AdvancedRoutingHelper:
         hookenv.log('Removing routing rules', level=hookenv.INFO)
         if os.path.exists(self.ifdown_path):
             try:
-                subprocess.check_call(["sh", "-c", self.ifdown_path], shell=True)
-            except subprocess.CalledProcessError:
+                subprocess.check_call(["sh", "-c", self.ifdown_path])
+            except subprocess.CalledProcessError as err:
                 # Either rules are removed or not valid
-                hookenv.log('ifdown script failed. Maybe rules are already gone?', 'WARNING')
+                hookenv.log('ifdown script {} failed. Maybe rules are already\
+                        gone? Error: {}'.format(self.ifdown_path, err), 'WARNING')
 
         # remove files
         if os.path.exists(self.ifup_path):
             os.remove(self.ifup_path)
         if os.path.exists(self.ifdown_path):
             os.remove(self.ifdown_path)
+        # remove table name file from iproute2
+        if os.path.exists(self.table_name_file):
+            os.remove(self.table_name_file)
 
         # remove symlinks
         release = lsb_release()['DISTRIB_CODENAME'].lower()
@@ -117,11 +127,11 @@ class AdvancedRoutingHelper:
             else:
                 os.remove('{}{}'.format(self.netplan_up_path, self.if_script))
                 os.remove('{}{}'.format(self.netplan_down_path, self.if_script))
-        except Exception:
-            hookenv.log('Nothing to clean up', 'WARNING')
+        except OSError as err:
+            hookenv.log('Nothing to clean up: {}'.format(err), 'WARNING')
 
     def symlink_force(self, target, link_name):
-        """Ensures accute symlink by removing any existing links."""
+        """Ensures accurate symlink by removing any existing links."""
         try:
             os.symlink(target, link_name)
         except OSError as e:
