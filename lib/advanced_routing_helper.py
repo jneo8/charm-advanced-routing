@@ -50,9 +50,8 @@ class AdvancedRoutingHelper:
         # check for service file of charm-policy-routing, and block if its present
         if os.path.exists(self.policy_routing_service_path + 'charm-pre-install-policy-routing.service'):
             hookenv.log('It looks like charm-policy-routing is enabled. '
-                        ' charm-pre-install-policy-routing.service', 'WARNING')
+                        ' charm-pre-install-policy-routing.service', 'ERROR')
             hookenv.status_set('blocked', 'Please disable charm-policy-routing')
-            raise Exception('Please disable charm-policy-routing')
 
     def post_setup(self):
         """Symlinks the up/down scripts from the if.up/down or netplan scripts location."""
@@ -106,8 +105,8 @@ class AdvancedRoutingHelper:
                 subprocess.check_call(["sh", "-c", self.ifdown_path])
             except subprocess.CalledProcessError as err:
                 # Either rules are removed or not valid
-                hookenv.log('ifdown script {} failed. Maybe rules are already\
-                        gone? Error: {}'.format(self.ifdown_path, err), 'WARNING')
+                hookenv.log('ifdown script {} failed. Maybe rules are already gone? Error: {}'.format(
+                    self.ifdown_path, err), 'WARNING')
 
         # remove files
         if os.path.exists(self.ifup_path):

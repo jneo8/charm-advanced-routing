@@ -106,7 +106,7 @@ class RoutingEntryTable(RoutingEntryType):
 
     def create_line(self):
         """Not implemented in this base class."""
-        raise NotImplementedError
+        pass
 
     def apply(self):
         """Opens iproute tables and adds the known list of tables into this file."""

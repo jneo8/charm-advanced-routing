@@ -4,9 +4,6 @@ import shutil
 from unittest import mock
 
 
-import pytest
-
-
 import routing_validator
 
 
@@ -64,16 +61,6 @@ class TestAdvancedRoutingHelper():
 
         assert test_obj.ifup_path == uppath + test_obj.if_script
         assert test_obj.ifdown_path == downpath + test_obj.if_script
-
-        # touch file to cause the exception
-        try:
-            with open(test_obj.policy_routing_service_path + 'charm-pre-install-policy-routing.service', "w+") as f:
-                f.write('dont care\n')
-        except IOError:
-            pass  # dont care
-
-        with pytest.raises(Exception):
-            test_obj.pre_setup(test_obj)
 
     def test_setup(self, advanced_routing_helper):
         """Test setup."""
