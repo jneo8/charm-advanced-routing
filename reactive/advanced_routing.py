@@ -45,7 +45,6 @@ def reconfigure_routing():
         except Exception as ex:
             log('ERROR', str(ex))
             status_set('blocked', 'Error: {}'.format(str(ex)))
-            raise ex
     else:
         status_set('maintenance', 'Removing routes.')
         try:
@@ -53,6 +52,5 @@ def reconfigure_routing():
         except Exception as ex:
             log('ERROR', str(ex))
             status_set('blocked', 'Error: {}'.format(str(ex)))
-            raise ex
 
     status_set('active', 'Unit is ready.')
