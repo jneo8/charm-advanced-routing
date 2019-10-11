@@ -6,8 +6,7 @@ import os
 import pytest
 
 pytestmark = pytest.mark.asyncio
-# SERIES = ['bionic', 'xenial']
-SERIES = ['bionic']
+SERIES = ['bionic', 'xenial']
 
 ############
 # FIXTURES #
