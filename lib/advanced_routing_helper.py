@@ -47,7 +47,7 @@ class AdvancedRoutingHelper:
         """Create folder path for the ifup/down scripts."""
         for ifpath in ["if-up", "if-down"]:
             ifpath_full = self.common_location / ifpath
-            if not (ifpath_full).exists():
+            if not ifpath_full.exists():
                 os.makedirs(ifpath_full)
                 hookenv.log('Created {}'.format(ifpath_full), level=hookenv.INFO)
 

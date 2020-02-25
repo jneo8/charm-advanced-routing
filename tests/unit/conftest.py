@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Configurations for tests."""
+import pathlib
 import subprocess
 import unittest.mock as mock
 
@@ -32,7 +33,7 @@ def mock_hookenv_config(monkeypatch):
 
     def mock_config():
         cfg = {}
-        yml = yaml.load(open('./config.yaml'))
+        yml = yaml.safe_load(open('./config.yaml'))
 
         # Load all defaults
         for key, value in yml['options'].items():
@@ -61,7 +62,8 @@ def mock_charm_dir(monkeypatch):
 def advanced_routing_helper(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
     """Routing fixture."""
     from advanced_routing_helper import AdvancedRoutingHelper
-    helper = AdvancedRoutingHelper
+    AdvancedRoutingHelper.common_location = pathlib.Path("/tmp/test/charm-advanced-routing")
+    helper = AdvancedRoutingHelper()
 
     monkeypatch.setattr('advanced_routing_helper.AdvancedRoutingHelper', lambda: helper)
 
