@@ -1,12 +1,14 @@
 #!/usr/bin/python3.6
 """Main module for functional testing."""
 
+import json
 import os
 
 import pytest
 
 pytestmark = pytest.mark.asyncio
 SERIES = ['bionic', 'xenial']
+CHARM_BUILD_DIR = os.getenv('JUJU_REPOSITORY', '/tmp/charm-builds/advanced-routing').rstrip('/')
 
 ############
 # FIXTURES #
@@ -20,19 +22,19 @@ async def deploy_app(request, model):
 
     await model.deploy(
         'ubuntu',
-        application_name='ubuntu-' + release,
+        application_name='ubuntu-{}'.format(release),
         series=release,
         channel='stable'
     )
     advanced_routing = await model.deploy(
-        '{}/builds/advanced-routing'.format(os.getenv('JUJU_REPOSITORY')),
-        application_name='advanced-routing-' + release,
+        CHARM_BUILD_DIR,
+        application_name='advanced-routing-{}'.format(release),
         series=release,
         num_units=0,
     )
     await model.add_relation(
-        'ubuntu-' + release,
-        'advanced-routing-' + release
+        'ubuntu-{}'.format(release),
+        'advanced-routing-{}'.format(release),
     )
 
     await model.block_until(lambda: advanced_routing.status == 'active')
@@ -56,31 +58,38 @@ async def test_deploy(deploy_app):
 
 async def test_juju_routing(reconfigure_app, file_contents, file_exists, unit, deploy_app):
     """Test juju routing file contents with config."""
-    json_config = """[{
-    "type": "table",
-    "table": "SF1"
-}, {
-    "type": "route",
-    "default_route": true,
-    "net": "192.170.1.0/24",
-    "gateway": "10.191.86.2",
-    "table": "SF1",
-    "metric": 101,
-    "device": "eth0"
-}, {
-    "type": "route",
-    "net": "6.6.6.0/24",
-    "gateway": "10.191.86.2"
-}, {
-    "type": "rule",
-    "from-net": "192.170.2.0/24",
-    "to-net": "192.170.2.0/24",
-    "table": "SF1",
-    "priority": 101
-} ]
-"""
-    await reconfigure_app(cfg={'advanced-routing-config': json_config}, target=deploy_app)
-    await reconfigure_app(cfg={'enable-advanced-routing': 'true'}, target=deploy_app)
+    json_config = [
+        {
+            "type": "table",
+            "table": "SF1",
+        }, {
+            "type": "route",
+            "default_route": True,
+            "net": "192.170.1.0/24",
+            "gateway": "10.191.86.2",
+            "table": "SF1",
+            "metric": 101,
+            "device": "eth0",
+        }, {
+            "type": "route",
+            "net": "6.6.6.0/24",
+            "gateway": "10.191.86.2",
+        }, {
+            "type": "rule",
+            "from-net": "192.170.2.0/24",
+            "to-net": "192.170.2.0/24",
+            "table": "SF1",
+            "priority": 101,
+        },
+    ]
+    await reconfigure_app(
+        cfg={'advanced-routing-config': json.dumps(json_config)},
+        target=deploy_app,
+    )
+    await reconfigure_app(
+        cfg={'enable-advanced-routing': 'true'},
+        target=deploy_app,
+    )
 
     up_path = '/usr/local/lib/juju-charm-advanced-routing/if-up/95-juju_routing'
     down_path = '/usr/local/lib/juju-charm-advanced-routing/if-down/95-juju_routing'
@@ -116,7 +125,10 @@ ip route flush cache
 
 async def test_juju_routing_disable(reconfigure_app, file_exists, unit, deploy_app):
     """Test juju routing file non-existance when conf disabled."""
-    await reconfigure_app(cfg={'enable-advanced-routing': 'false'}, target=deploy_app)
+    await reconfigure_app(
+        cfg={'enable-advanced-routing': 'false'},
+        target=deploy_app,
+    )
     path = '/etc/networkd-dispatcher/routable.d/95-juju_routing'
     exists = await file_exists(path=path, target=unit)
     assert exists == "0\n"
