@@ -1,13 +1,13 @@
 name: advanced-routing
-maintainer: David O Neill <david.o.neill@canonical.com>
+maintainer: LMA Charmers <llama-charmers@lists.launchpad.net>
 summary: Routing configuration editor
 description: |
-  This charm can be deployed alongside principle charms to enable custom
+  This charm can be deployed alongside principal charms to enable custom
   network routes management.
 subordinate: true
 series:
-  - xenial
   - bionic
+  - xenial
 tags:
     - misc
 requires:

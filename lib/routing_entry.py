@@ -8,6 +8,7 @@ concrete implementations, that model a routing table
            |                    |                  |
      RoutingEntryTable  RoutingEntryRoute  RoutingEntryRule
 """
+import collections
 import subprocess
 from abc import ABCMeta, abstractmethod, abstractproperty
 
@@ -91,18 +92,44 @@ class RoutingEntryType(metaclass=ABCMeta):
 class RoutingEntryTable(RoutingEntryType):
     """RoutingEntryType used for routing tables."""
 
+    default_table_file = "/etc/iproute2/rt_tables"
     table_name_file = '/etc/iproute2/rt_tables.d/juju-managed.conf'
-    table_index_counter = 100  # static
+    table_index_offset = 100  # static
     tables = set()
+    tables_all = set()
 
     def __init__(self, config):
         """Adds unique tables to the tables list."""
         hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
+        RoutingEntryTable.tables_all = self.store_default_tables
 
-        if self.config['table'] not in RoutingEntryTable.tables:
-            RoutingEntryTable.tables.add(self.config['table'])
+        if not self.table_exists:
+            RoutingEntryTable.tables.add(self.config["table"])
+            RoutingEntryTable.tables_all.add(self.config["table"])
+
+    @property
+    def store_default_tables(self):
+        """Store the default tables.
+
+        Default tables don't need to be created by the user.
+        """
+        try:
+            with open(self.default_table_file) as fd:
+                # ['local', 'main', 'default', 'unspec']
+                self.default_tables = set([
+                    line.split()[1] for line in fd.readlines()
+                    if line.strip() and not line.strip().startswith("#")
+                ])
+        except FileNotFoundError:
+            self.default_tables = set([])
+
+    @property
+    def table_exists(self):
+        """Verify if the table shared is reserved by iproute2."""
+        return any(self.config["table"] in table
+                   for table in [self.tables_all, RoutingEntryTable.tables])
 
     def create_line(self):
         """Not implemented in this base class."""
@@ -111,9 +138,14 @@ class RoutingEntryTable(RoutingEntryType):
     def apply(self):
         """Opens iproute tables and adds the known list of tables into this file."""
         with open(RoutingEntryTable.table_name_file, 'w') as rt_table_file:
-            num = RoutingEntryTable.table_index_counter
+            num = RoutingEntryTable.table_index_offset
             for num, tbl in enumerate(RoutingEntryTable.tables):
-                rt_table_file.write("{} {}\n".format(num + RoutingEntryTable.table_index_counter, tbl))
+                rt_table_file.write(
+                    "{} {}\n".format(
+                        num + RoutingEntryTable.table_index_offset,
+                        tbl,
+                    )
+                )
 
     @property
     def addline(self):
@@ -142,30 +174,36 @@ class RoutingEntryRoute(RoutingEntryType):
 
         # default route in table
         if 'default_route' in self.config.keys():
-            cmd.append("default")
-            cmd.append("via")
-            cmd.append(self.config['gateway'])
-            cmd.append("table")
-            cmd.append(self.config['table'])
+            cmd.extend([
+                "default",
+                "via",
+                self.config["gateway"],
+                "table",
+                self.config["table"],
+            ])
             if 'device' in self.config.keys():
-                cmd.append("dev")
-                cmd.append(self.config['device'])
-        # route in any given table or none
-        else:
-            cmd.append(self.config['net'])
-            if 'gateway' in self.config.keys():
-                cmd.append("via")
-                cmd.append(self.config['gateway'])
-            if 'device' in self.config.keys():
-                cmd.append("dev")
-                cmd.append(self.config['device'])
-            if 'table' in self.config.keys():
-                cmd.append("table")
-                cmd.append(self.config['table'])
-            if 'metric' in self.config.keys():
-                cmd.append("metric")
-                cmd.append(str(self.config['metric']))
+                cmd.extend([
+                    "dev",
+                    self.config["device"],
+                ])
+            return cmd
 
+        # route in any given table or none
+        cmd.append(self.config['net'])
+        opts = collections.OrderedDict({
+            "gateway": "via",
+            "device": "dev",
+            "table": "table",
+            "metric": "metric",
+        })
+        for opt in opts.keys():
+            try:
+                cmd.extend([
+                    opts[opt],
+                    str(self.config[opt]),
+                ])
+            except KeyError:
+                pass
         return cmd
 
     def apply(self):
@@ -197,19 +235,25 @@ class RoutingEntryRule(RoutingEntryType):
         cmd = ["ip", "rule", "add", "from", self.config['from-net']]
 
         if 'to-net' in self.config.keys():
-            cmd.append("to")
-            cmd.append(self.config['to-net'])
-            cmd.append("lookup")
-            if 'table' in self.config.keys():
+            cmd.extend([
+                "to",
+                self.config["to-net"],
+                "lookup",
+            ])
+            try:
                 cmd.append(self.config['table'])
-            else:
-                cmd.append('main')
-        else:
-            if 'table' in self.config.keys():
-                cmd.append(self.config['table'])
-            if 'priority' in self.config.keys():
-                cmd.append(self.config['priority'])
+            except KeyError:
+                cmd.append("main")
+            return cmd
 
+        for opt in ["table", "priority"]:
+            try:
+                cmd.extend([
+                    opt,
+                    self.config[opt],
+                ])
+            except KeyError:
+                pass
         return cmd
 
     def apply(self):

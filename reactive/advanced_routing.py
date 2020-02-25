@@ -1,42 +1,47 @@
 """Reactive charm hooks."""
-from advanced_routing_helper import AdvancedRoutingHelper
+import sys
 
-from charmhelpers.core.hookenv import (
-    config,
-    status_set,
-)
+from advanced_routing_helper import AdvancedRoutingHelper, PolicyRoutingExists
 
-from charms.reactive import (
-    set_flag,
-    when,
-    when_not,
-)
+from charms.layer import status
+from charms.reactive import set_flag, when, when_not
+
+from routing_validator import RoutingConfigValidatorError
 
 
-advanced_routing = AdvancedRoutingHelper()
+try:
+    advanced_routing = AdvancedRoutingHelper()
+except PolicyRoutingExists as error:
+    status.blocked(str(error))
+    sys.exit(0)
 
 
 @when_not('advanced-routing.installed')
 def install_routing():
     """Install the charm."""
-    if config('enable-advanced-routing'):
-        advanced_routing.setup()
+    if advanced_routing.is_advanced_routing_enabled:
+        status.maintenance('Installing routes')
+        try:
+            advanced_routing.setup()
+        except RoutingConfigValidatorError as error:
+            status.blocked(str(error))
+            return
         advanced_routing.apply_config()
         set_flag('advanced-routing.installed')
 
-    status_set('active', 'Unit is ready.')
+    status.active('Unit is ready.')
 
 
 @when('config.changed')
 def reconfigure_routing():
     """Handle routing configuration change."""
-    if config('enable-advanced-routing'):
-        status_set('maintenance', 'Installing routes.')
+    if advanced_routing.is_advanced_routing_enabled:
+        status.maintenance('Installing routes')
         advanced_routing.remove_routes()
         advanced_routing.setup()
         advanced_routing.apply_config()
     else:
-        status_set('maintenance', 'Removing routes.')
+        status.maintenance('Removing routes')
         advanced_routing.remove_routes()
 
-    status_set('active', 'Unit is ready.')
+    status.active('Unit is ready')

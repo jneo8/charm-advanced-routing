@@ -3,15 +3,15 @@ options:
     type: boolean
     default: False
     description: |
-      Wheter to use the custom routing configuration provided by the charm.
+      Whether to use the custom routing configuration provided by the charm.
   advanced-routing-config:
     type: string
     default: "[]"
     description: |
       A json array consisting of objects, e.g.
       [ {
-          "type": "route", 
-          "net": "192.170.1.0/24", 
+          "type": "route",
+          "net": "192.170.1.0/24",
           "device": "eth5"
       }, { ... } ]
-      @ see exmaple_config.yaml for more examples
+      @ see example_config.yaml for more examples

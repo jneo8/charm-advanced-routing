@@ -1,57 +1,64 @@
 """Routing module."""
 import errno
 import os
+import pathlib
 import subprocess
 
-
 from charmhelpers.core import hookenv
-from charmhelpers.core.host import (
-    CompareHostReleases,
-    lsb_release,
-)
-
+from charmhelpers.core.host import CompareHostReleases, lsb_release
 
 from routing_entry import RoutingEntryType
 
 from routing_validator import RoutingConfigValidator
 
 
+class PolicyRoutingExists(Exception):
+    """Old charm-policy-routing configuration is in place."""
+
+    pass
+
+
 class AdvancedRoutingHelper:
     """Helper class for routing."""
 
     if_script = '95-juju_routing'
-    common_location = '/usr/local/lib/juju-charm-advanced-routing/'  # trailing slash
-    net_tools_up_path = '/etc/network/if-up.d/'  # trailing slash
-    net_tools_down_path = '/etc/network/if-down.d/'  # trailing slash
-    netplan_up_path = '/etc/networkd-dispatcher/routable.d/'  # trailing slash
-    netplan_down_path = '/etc/networkd-dispatcher/off.d/'  # trailing slash
-    policy_routing_service_path = '/etc/systemd/system/'  # trailing slash
-    table_name_file = '/etc/iproute2/rt_tables.d/juju-managed.conf'
-    ifup_path = None
-    ifdown_path = None
+    common_location = pathlib.Path('/usr/local/lib/juju-charm-advanced-routing')
+    net_tools_up_path = pathlib.Path('/etc/network/if-up.d')
+    net_tools_down_path = pathlib.Path('/etc/network/if-down.d')
+    netplan_up_path = pathlib.Path('/etc/networkd-dispatcher/routable.d')
+    netplan_down_path = pathlib.Path('/etc/networkd-dispatcher/off.d')
+    policy_routing_service_path = pathlib.Path('/etc/systemd/system')
+    table_name_file = pathlib.Path('/etc/iproute2/rt_tables.d/juju-managed.conf')
+    ifup_path = common_location / "if-up" / if_script
+    ifdown_path = common_location / "if-down" / if_script
 
     def __init__(self):
         """Init function."""
         hookenv.log('Init {}'.format(self.__class__.__name__), level=hookenv.INFO)
+        self.charm_config = hookenv.config()
         self.pre_setup()
+
+    @property
+    def is_advanced_routing_enabled(self):
+        """Returns boolean according to Juju config input."""
+        return self.charm_config["enable-advanced-routing"]
 
     def pre_setup(self):
         """Create folder path for the ifup/down scripts."""
-        if not os.path.exists(self.common_location + 'if-up/'):
-            os.makedirs(self.common_location + 'if-up/')
-            hookenv.log('Created {}'.format(self.common_location + 'if-up/'), level=hookenv.INFO)
-        if not os.path.exists(self.common_location + 'if-down/'):
-            os.makedirs(self.common_location + 'if-down/')
-            hookenv.log('Created {}'.format(self.common_location + 'if-down/'), level=hookenv.INFO)
-
-        self.ifup_path = '{}if-up/{}'.format(self.common_location, self.if_script)
-        self.ifdown_path = '{}if-down/{}'.format(self.common_location, self.if_script)
+        for ifpath in ["if-up", "if-down"]:
+            ifpath_full = self.common_location / ifpath
+            if not (ifpath_full).exists():
+                os.makedirs(ifpath_full)
+                hookenv.log('Created {}'.format(ifpath_full), level=hookenv.INFO)
 
         # check for service file of charm-policy-routing, and block if its present
-        if os.path.exists(self.policy_routing_service_path + 'charm-pre-install-policy-routing.service'):
-            hookenv.log('It looks like charm-policy-routing is enabled. '
-                        ' charm-pre-install-policy-routing.service', 'ERROR')
-            hookenv.status_set('blocked', 'Please disable charm-policy-routing')
+        if (self.policy_routing_service_path / 'charm-pre-install-policy-routing.service').exists():
+            hookenv.log(
+                'It looks like charm-policy-routing is enabled.'
+                ' charm-pre-install-policy-routing.service',
+                hookenv.ERROR,
+            )
+            raise PolicyRoutingExists("Please disable charm-policy-routing")
 
     def post_setup(self):
         """Symlinks the up/down scripts from the if.up/down or netplan scripts location."""
@@ -67,9 +74,8 @@ class AdvancedRoutingHelper:
     def setup(self):
         """Modify the interfaces configurations."""
         # Validate configuration options first
-        conf = hookenv.config()
         routing_validator = RoutingConfigValidator()
-        routing_validator.read_configurations(conf)
+        routing_validator.read_configurations(self.charm_config["advanced-routing-config"])
         routing_validator.verify_config()
 
         hookenv.log('Writing {}'.format(self.ifup_path), level=hookenv.INFO)
@@ -100,22 +106,25 @@ class AdvancedRoutingHelper:
     def remove_routes(self):
         """Cleanup job."""
         hookenv.log('Removing routing rules', level=hookenv.INFO)
-        if os.path.exists(self.ifdown_path):
+        if self.ifdown_path.is_file():
             try:
                 subprocess.check_call(["sh", "-c", self.ifdown_path])
             except subprocess.CalledProcessError as err:
                 # Either rules are removed or not valid
-                hookenv.log('ifdown script {} failed. Maybe rules are already gone? Error: {}'.format(
-                    self.ifdown_path, err), 'WARNING')
+                hookenv.log(
+                    'ifdown script {} failed. Maybe rules are already gone? Error: {}'.format(
+                        self.ifdown_path,
+                        err,
+                    ),
+                    hookenv.WARNING,
+                )
 
-        # remove files
-        if os.path.exists(self.ifup_path):
-            os.remove(self.ifup_path)
-        if os.path.exists(self.ifdown_path):
-            os.remove(self.ifdown_path)
-        # remove table name file from iproute2
-        if os.path.exists(self.table_name_file):
-            os.remove(self.table_name_file)
+        # remove start/stop scripts and table name from iproute2
+        for filename in [self.ifup_path, self.ifdown_path, self.table_name_file]:
+            try:
+                os.remove(filename)
+            except FileNotFoundError:
+                pass
 
         # remove symlinks
         release = lsb_release()['DISTRIB_CODENAME'].lower()
@@ -127,7 +136,7 @@ class AdvancedRoutingHelper:
                 os.remove('{}{}'.format(self.netplan_up_path, self.if_script))
                 os.remove('{}{}'.format(self.netplan_down_path, self.if_script))
         except OSError as err:
-            hookenv.log('Nothing to clean up: {}'.format(err), 'WARNING')
+            hookenv.log('Nothing to clean up: {}'.format(err), hookenv.WARNING)
 
     def symlink_force(self, target, link_name):
         """Ensures accurate symlink by removing any existing links."""

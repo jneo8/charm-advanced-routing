@@ -1,7 +1,9 @@
 # Overview
 
-This subordinate charm allows for the configuration of simple policy routing rules on the deployed host
-and adding routing to configured services via a JSON.
+This subordinate charm allows for the configuration of policy routing rules on the deployed host,
+as well as routes to configured services. A list of hash maps, in JSON format, is expected.
+
+Charm supports IPv4 addressing.
 
 
 # Build
@@ -15,15 +17,15 @@ Add to an existing application using juju-info relation.
 
 Example:
 ```
-juju deploy cs:~canonical-bootstack/routing
+juju deploy cs:advanced-routing
 juju add-relation ubuntu advanced-routing
 ```
 
 # Configuration                                                                 
 The user can configure the following parameters:
-* enable-advanced-routing: Enable routing. This requires for the charm to have JSON with routing information configured: ```juju config advanced-routing --file path/to/your/config```
+ * `enable-advanced-routing`: Enable routing. This requires for the charm to have routing information configured in JSON format: ```juju config advanced-routing --file path/to/your/config```
 
-The advanced-routing-config parameter contains 3 types of enties: 'table', 'route', 'rule'. The 'type' parameter is always required.
+ * `advanced-routing-config` parameter contains 3 types of entities: 'table', 'route', 'rule'. The 'type' parameter is always required.
 
 table: routing table to put the rules in (used in rules)
 
@@ -43,6 +45,7 @@ rule:
 
 An example yaml config file below:
 
+```yaml
 settings:
   advanced-routing-config:
     value: |-
@@ -70,8 +73,9 @@ settings:
       } ]
   enable-advanced-routing:
     value: true
+```
 
-The example_config.yaml file is also provided with the codebase.
+The `example_config.yaml` file is also provided with the codebase.
 
 # Testing                                                                       
 To run lint tests:
@@ -91,5 +95,5 @@ tox -e functional
 ```
 
 # Contact Information
-David O Neill <david.o.neill@canonical.com>
 
+ * LMA Charmers <llama-charmers@lists.launchpad.net>
