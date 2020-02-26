@@ -33,7 +33,7 @@ class RoutingEntryType(metaclass=ABCMeta):
                 command = ' '.join(cmd)
                 ps = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 ps.communicate()
-                return True if ps.returncode == 0 else False
+                return ps.returncode == 0
             else:
                 hookenv.log('Subprocess check: {} {}'.format(self.__class__.__name__, cmd), level=hookenv.INFO)
                 subprocess.check_call(cmd)
@@ -95,15 +95,15 @@ class RoutingEntryTable(RoutingEntryType):
     default_table_file = "/etc/iproute2/rt_tables"
     table_name_file = '/etc/iproute2/rt_tables.d/juju-managed.conf'
     table_index_offset = 100  # static
-    tables = set()
-    tables_all = set()
+    tables = set([])
+    tables_all = set([])
 
     def __init__(self, config):
         """Adds unique tables to the tables list."""
         hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
-        RoutingEntryTable.tables_all = self.store_default_tables
+        RoutingEntryTable.tables_all.update(self.store_default_tables)
 
         if not self.table_exists:
             RoutingEntryTable.tables.add(self.config["table"])
@@ -118,18 +118,17 @@ class RoutingEntryTable(RoutingEntryType):
         try:
             with open(self.default_table_file) as fd:
                 # ['local', 'main', 'default', 'unspec']
-                self.default_tables = set([
+                return set([
                     line.split()[1] for line in fd.readlines()
                     if line.strip() and not line.strip().startswith("#")
                 ])
         except FileNotFoundError:
-            self.default_tables = set([])
+            return set([])
 
     @property
     def table_exists(self):
         """Verify if the table shared is reserved by iproute2."""
-        return any(self.config["table"] in table
-                   for table in [self.tables_all, RoutingEntryTable.tables])
+        return self.config["table"] in RoutingEntryTable.tables_all
 
     def create_line(self):
         """Not implemented in this base class."""

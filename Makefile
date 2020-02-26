@@ -3,7 +3,7 @@ help:
 	@echo ""
 	@echo " make help - show this text"
 	@echo " make lint - run flake8"
-	@echo " make test - run the unittests and lint"
+	@echo " make test - run all tests: lint, unit and func tests"
 	@echo " make unittest - run the tests defined in the unittest subdirectory"
 	@echo " make functional - run the tests defined in the functional subdirectory"
 	@echo " make release - build the charm"
@@ -14,7 +14,7 @@ lint:
 	@echo "Running flake8"
 	@tox -e lint
 
-test: unittest functional lint
+test: lint unittest functional
 
 unittest:
 	@tox -e unit
@@ -27,7 +27,7 @@ functional: build
 
 build:
 	@echo "Building charm to base directory $(JUJU_REPOSITORY)"
-	@-git describe --tags > ./repo-info
+#	@-git describe --tags > ./repo-info
 	@LAYER_PATH=./layers INTERFACE_PATH=./interfaces TERM=linux \
 		JUJU_REPOSITORY=$(JUJU_REPOSITORY) charm build . --force
 

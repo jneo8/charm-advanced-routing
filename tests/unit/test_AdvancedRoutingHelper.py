@@ -1,5 +1,4 @@
 """Main unit testing module."""
-import os
 import pathlib
 import shutil
 from unittest import mock
@@ -21,11 +20,11 @@ class TestAdvancedRoutingHelper():
     @classmethod
     def setUp(cls):
         """Setup."""
-        os.makedirs(cls.test_dir)
-        os.makedirs(cls.test_ifdown_path)
-        os.makedirs(cls.test_ifup_path)
-        os.makedirs(cls.test_netplandown_path)
-        os.makedirs(cls.test_netplanup_path)
+        cls.test_dir.mkdir(parents=True)
+        cls.test_ifdown_path.mkdir(parents=True)
+        cls.test_ifup_path.mkdir(parents=True)
+        cls.test_netplandown_path.mkdir(parents=True)
+        cls.test_netplanup_path.mkdir(parents=True)
 
     @classmethod
     def tearDown(cls):
@@ -44,8 +43,8 @@ class TestAdvancedRoutingHelper():
         test_obj.policy_routing_service_path = self.test_dir
 
         try:
-            os.remove(test_obj.policy_routing_service_path / 'charm-pre-install-policy-routing.service')
-        except OSError:
+            (test_obj.policy_routing_service_path / 'charm-pre-install-policy-routing.service').unlink()
+        except FileNotFoundError:
             pass
 
         test_obj.pre_setup()
@@ -101,8 +100,8 @@ class TestAdvancedRoutingHelper():
         link = self.test_dir / 'testlink'
 
         try:
-            os.remove(target)
-        except OSError:
+            target.unlink()
+        except FileNotFoundError:
             pass  # dont care
 
         # touch target file to link to

@@ -1,4 +1,3 @@
-#!/usr/bin/python3.6
 """Main module for functional testing."""
 
 import json
@@ -7,7 +6,10 @@ import os
 import pytest
 
 pytestmark = pytest.mark.asyncio
-SERIES = ['bionic', 'xenial']
+SERIES = [
+    'bionic',
+    'xenial',
+]
 CHARM_BUILD_DIR = os.getenv('JUJU_REPOSITORY', '/tmp/charm-builds/advanced-routing').rstrip('/')
 
 ############
@@ -37,7 +39,6 @@ async def deploy_app(request, model):
         'advanced-routing-{}'.format(release),
     )
 
-    await model.block_until(lambda: advanced_routing.status == 'active')
     yield advanced_routing
 
 
@@ -51,12 +52,19 @@ async def unit(deploy_app):
 #########
 
 
-async def test_deploy(deploy_app):
+async def test_deploy(deploy_app, model):
     """Test the deployment."""
-    assert deploy_app.status == 'active'
+    status, message = "blocked", "Advanced routing is disabled"
+    await model.block_until(
+        lambda: (deploy_app.status == status
+                 and all(unit.workload_status_message == message
+                         for unit in deploy_app.units)),
+        timeout=300,
+    )
+    assert True
 
 
-async def test_juju_routing(reconfigure_app, file_contents, file_exists, unit, deploy_app):
+async def test_juju_routing(file_contents, file_exists, deploy_app, model):
     """Test juju routing file contents with config."""
     json_config = [
         {
@@ -82,53 +90,77 @@ async def test_juju_routing(reconfigure_app, file_contents, file_exists, unit, d
             "priority": 101,
         },
     ]
-    await reconfigure_app(
-        cfg={'advanced-routing-config': json.dumps(json_config)},
-        target=deploy_app,
-    )
-    await reconfigure_app(
-        cfg={'enable-advanced-routing': 'true'},
-        target=deploy_app,
+    await deploy_app.set_config({
+        'advanced-routing-config': json.dumps(json_config),
+        'enable-advanced-routing': 'true',
+    })
+
+    status, agent_status, message = "active", "idle", "Unit is ready"
+    await model.block_until(
+        lambda: (deploy_app.status == status
+                 and all(unit.agent_status == agent_status
+                         and unit.workload_status_message == message
+                         for unit in deploy_app.units)),
+        timeout=300,
     )
 
-    up_path = '/usr/local/lib/juju-charm-advanced-routing/if-up/95-juju_routing'
-    down_path = '/usr/local/lib/juju-charm-advanced-routing/if-down/95-juju_routing'
+    common_path = "/usr/local/lib/juju-charm-advanced-routing"
+    up_path = "{}/if-up/95-juju_routing".format(common_path)
+    down_path = "{}/if-down/95-juju_routing".format(common_path)
+    unit = deploy_app.units.pop()
 
     if_up_content = await file_contents(path=up_path, target=unit)
     if_down_content = await file_contents(path=down_path, target=unit)
 
-    if_up_expected_content = """# This file is managed by Juju.
-ip route flush cache
-# Table: name SF1
-ip route replace default via 10.191.86.2 table SF1 dev eth0
-ip route replace 6.6.6.0/24 via 10.191.86.2
-ip rule add from 192.170.2.0/24 to 192.170.2.0/24 lookup SF1
-"""
+    if_up_expected_content = (
+        "# This file is managed by Juju.\n"
+        "ip route flush cache\n"
+        "# Table: name SF1\n"
+        "ip route replace default via 10.191.86.2 table SF1 dev eth0\n"
+        "ip route replace 6.6.6.0/24 via 10.191.86.2\n"
+        "ip rule add from 192.170.2.0/24 to 192.170.2.0/24 lookup SF1\n"
+    )
 
-    if_down_expected_content = """# This file is managed by Juju.
-ip rule del from 192.170.2.0/24 to 192.170.2.0/24 lookup SF1
-ip route del 6.6.6.0/24 via 10.191.86.2
-ip route del default via 10.191.86.2 table SF1 dev eth0
-ip route flush table SF1
-ip rule del table SF1
-ip route flush cache
-"""
+    if_down_expected_content = (
+        "# This file is managed by Juju.\n"
+        "ip rule del from 192.170.2.0/24 to 192.170.2.0/24 lookup SF1\n"
+        "ip route del 6.6.6.0/24 via 10.191.86.2\n"
+        "ip route del default via 10.191.86.2 table SF1 dev eth0\n"
+        "ip route flush table SF1\n"
+        "ip rule del table SF1\n"
+        "ip route flush cache\n"
+    )
 
-    if_up_exists = await file_exists(path=up_path, target=unit)
-    if_down_exists = await file_exists(path=down_path, target=unit)
-
-    assert if_up_exists == "1\n"
-    assert if_down_exists == "1\n"
     assert if_up_expected_content == if_up_content
     assert if_down_expected_content == if_down_content
 
+    series = deploy_app.name.split("-")[-1]
+    ifup_path = ("/etc/network/if-up.d"
+                 if series >= "xenial" or series < "bionic"
+                 else "/etc/networkd-dispatcher/routable.d")
+    ifup_filename = "{}/95-juju_routing".format(ifup_path)
+    ifup_exists = await file_exists(path=ifup_filename, target=unit)
 
-async def test_juju_routing_disable(reconfigure_app, file_exists, unit, deploy_app):
+    assert ifup_exists == "1\n"
+
+
+async def test_juju_routing_disable(file_exists, unit, deploy_app, model):
     """Test juju routing file non-existance when conf disabled."""
-    await reconfigure_app(
-        cfg={'enable-advanced-routing': 'false'},
-        target=deploy_app,
+    status, message = "blocked", "Advanced routing is disabled"
+
+    await deploy_app.set_config({'enable-advanced-routing': 'false'})
+    await model.block_until(
+        lambda: (deploy_app.status == status
+                 and all(unit.workload_status_message == message
+                         for unit in deploy_app.units)),
+        timeout=300,
     )
-    path = '/etc/networkd-dispatcher/routable.d/95-juju_routing'
-    exists = await file_exists(path=path, target=unit)
-    assert exists == "0\n"
+
+    series = deploy_app.name.split("-")[-1]
+    ifup_path = ("/etc/network/if-up.d"
+                 if "xenial" <= series < "bionic"
+                 else "/etc/networkd-dispatcher/routable.d")
+    ifup_filename = "{}/95-juju_routing".format(ifup_path)
+    ifup_exists = await file_exists(path=ifup_filename, target=unit)
+
+    assert ifup_exists == "0\n"

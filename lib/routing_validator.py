@@ -36,7 +36,7 @@ class RoutingConfigValidator:
         hookenv.log('Init {}'.format(self.__class__.__name__), level=hookenv.INFO)
 
         self.pattern = re.compile(TABLE_NAME_PATTERN)
-        self.tables = set()
+        self.tables = set([])
         self.config = []
 
     def read_configurations(self, conf):

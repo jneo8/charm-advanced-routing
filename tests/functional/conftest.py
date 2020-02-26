@@ -119,7 +119,7 @@ async def file_contents(run_command):
     async def _file_contents(path, target):
         cmd = 'cat {}'.format(path)
         results = await run_command(cmd, target)
-        return results['Stdout']
+        return results["Stdout"]
     return _file_contents
 
 
@@ -134,7 +134,7 @@ async def file_exists(run_command):
     async def _file_exists(path, target):
         cmd = '[ -f "{}" ] && echo 1 || echo 0'.format(path)
         results = await run_command(cmd, target)
-        return results['Stdout']
+        return results["Stdout"]
     return _file_exists
 
 
