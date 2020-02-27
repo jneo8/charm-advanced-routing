@@ -138,6 +138,8 @@ class RoutingConfigValidator:
             ipaddress.ip_network(conf['net'])
             return
         except KeyError:
+            if "default_route" in conf:
+                return
             msg = "Bad network config: routing entries need the 'net' def"
         except ValueError as error:
             msg = 'Bad network config: {} - {}'.format(conf['net'], error)
@@ -181,10 +183,13 @@ class RoutingConfigValidator:
             if not is_valid_bool_value:
                 msg = 'Bad network config: default_route should be bool in {}'.format(conf)
             elif not table_exists:
-                msg = "Bad network config: Key 'table' missing in default route {} ".format(conf)
+                msg = "Bad network config: Key 'table' missing in default route {}".format(conf)
+            else:
+                msg = "Bad network config: Key 'table' cannot be 'main' in default route {}".format(conf)
             self.report_error(msg)
         except KeyError:
-            # key is optional
+            # key is mutually exclusive with "net"
+            # "net" has been checked before
             pass
 
     def verify_route_device(self, conf):
@@ -243,16 +248,17 @@ class RoutingConfigValidator:
     def verify_rule_to_net(self, conf):
         """Verify rule destination network.
 
-        "to-net" key is a required configuration parameter.
+        "to-net" key is a optional configuration parameter.
         """
         try:
             ipaddress.ip_network(conf['to-net'])
             return
         except KeyError:
-            msg = "Bad network config: rule entries need the 'to-net' def"
+            # key is optional
+            pass
         except ValueError as error:
             msg = 'Bad network config: {} - {}'.format(conf['to-net'], error)
-        self.report_error(msg)
+            self.report_error(msg)
 
     def verify_rule_table(self, conf):
         """Verify rule table.

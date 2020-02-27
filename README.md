@@ -30,17 +30,17 @@ The user can configure the following parameters:
 table: routing table to put the rules in (used in rules)
 
 route: defines a static route with the following params:
- - default_route: should this be a default route or not (boolean: true|false) (optional)
- - net:           IPv4 CIDR for a destination network (string) (required)
+ - default_route: should this be a default route or not (boolean: true|false) (optional, requires gateway and table)
+ - net:           IPv4 CIDR for a destination network (string) (mutually exclusive with default_route, and requires gateway)
  - gateway:       IPv4 gateway address (string) (required)
- - table:         routing table name (string) (optional)
+ - table:         routing table name (string) (optional, except if default_route is used)
  - metric:        metric for the route (int) (optional)
  - device:        device (interface) (string) (optional)
 
 rule:
  - from-net: IPv4 CIDR source network (string) (required)
- - to-net: IPv4 CIDR destination network (string) (required)
- - table: routing table name (string) (required)
+ - to-net: IPv4 CIDR destination network (string) (optional)
+ - table: routing table name (string) (optional, default is main)
  - priority: priority (int) (optional)
 
 An example yaml config file below:

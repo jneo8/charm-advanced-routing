@@ -3,12 +3,14 @@
 import json
 import os
 
+import cfg_opts
+
 import pytest
 
 pytestmark = pytest.mark.asyncio
 SERIES = [
     'bionic',
-    'xenial',
+    # 'xenial',
 ]
 CHARM_BUILD_DIR = os.getenv('JUJU_REPOSITORY', '/tmp/charm-builds/advanced-routing').rstrip('/')
 
@@ -64,32 +66,14 @@ async def test_deploy(deploy_app, model):
     assert True
 
 
-async def test_juju_routing(file_contents, file_exists, deploy_app, model):
+@pytest.mark.parametrize(
+    "cfg",
+    [pytest.param(cfg, id="cfg-{}".format(i))
+     for i, cfg in enumerate(cfg_opts.JSON_CONFIGS)],
+)
+async def test_juju_routing(cfg, file_contents, file_exists, deploy_app, model):
     """Test juju routing file contents with config."""
-    json_config = [
-        {
-            "type": "table",
-            "table": "SF1",
-        }, {
-            "type": "route",
-            "default_route": True,
-            "net": "192.170.1.0/24",
-            "gateway": "10.191.86.2",
-            "table": "SF1",
-            "metric": 101,
-            "device": "eth0",
-        }, {
-            "type": "route",
-            "net": "6.6.6.0/24",
-            "gateway": "10.191.86.2",
-        }, {
-            "type": "rule",
-            "from-net": "192.170.2.0/24",
-            "to-net": "192.170.2.0/24",
-            "table": "SF1",
-            "priority": 101,
-        },
-    ]
+    json_config = cfg["input"]
     await deploy_app.set_config({
         'advanced-routing-config': json.dumps(json_config),
         'enable-advanced-routing': 'true',
@@ -112,24 +96,8 @@ async def test_juju_routing(file_contents, file_exists, deploy_app, model):
     if_up_content = await file_contents(path=up_path, target=unit)
     if_down_content = await file_contents(path=down_path, target=unit)
 
-    if_up_expected_content = (
-        "# This file is managed by Juju.\n"
-        "ip route flush cache\n"
-        "# Table: name SF1\n"
-        "ip route replace default via 10.191.86.2 table SF1 dev eth0\n"
-        "ip route replace 6.6.6.0/24 via 10.191.86.2\n"
-        "ip rule add from 192.170.2.0/24 to 192.170.2.0/24 lookup SF1\n"
-    )
-
-    if_down_expected_content = (
-        "# This file is managed by Juju.\n"
-        "ip rule del from 192.170.2.0/24 to 192.170.2.0/24 lookup SF1\n"
-        "ip route del 6.6.6.0/24 via 10.191.86.2\n"
-        "ip route del default via 10.191.86.2 table SF1 dev eth0\n"
-        "ip route flush table SF1\n"
-        "ip rule del table SF1\n"
-        "ip route flush cache\n"
-    )
+    if_up_expected_content = cfg["expected_ifup"]
+    if_down_expected_content = cfg["expected_ifdown"]
 
     assert if_up_expected_content == if_up_content
     assert if_down_expected_content == if_down_content

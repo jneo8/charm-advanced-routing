@@ -1,14 +1,13 @@
-settings:
-  advanced-routing-config:
-    value: |-
+advanced-routing:
+  enable-advanced-routing: true
+  advanced-routing-config: |
       [ {
           "type": "table",
           "table": "SF1"
       }, {
           "type": "route",
-          "default_route": true,  
-          "net": "192.170.1.0/24",
-          "gateway": "10.191.86.2",      
+          "default_route": true,
+          "gateway": "10.191.86.2",
           "table": "SF1",
           "metric": 101,
           "device": "eth0"
@@ -23,5 +22,3 @@ settings:
           "table": "SF1",
           "priority": 101
       } ]
-  enable-advanced-routing:
-    value: true

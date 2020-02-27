@@ -168,7 +168,20 @@ class RoutingEntryRoute(RoutingEntryType):
         self.config = config
 
     def create_line(self):
-        """Creates and returns the command line for this route object."""
+        """Creates and returns the command line for this route object.
+
+        "default_route" and "net" are mutually exclusive. One of them is required
+        "default_route" requires "table"
+        "gateway" is mandatory
+
+        Optional keywords: device, table and metric
+
+        """
+        opts = collections.OrderedDict({
+            "device": "dev",
+            "table": "table",
+            "metric": "metric",
+        })
         cmd = ["ip", "route", "replace"]
 
         # default route in table
@@ -180,25 +193,21 @@ class RoutingEntryRoute(RoutingEntryType):
                 "table",
                 self.config["table"],
             ])
-            if 'device' in self.config.keys():
-                cmd.extend([
-                    "dev",
-                    self.config["device"],
-                ])
-            return cmd
+            # already enforced
+            del opts["table"]
+        else:
+            # route in any given table or none
+            cmd.extend([
+                self.config['net'],
+                "via",
+                self.config["gateway"],
+            ])
 
-        # route in any given table or none
-        cmd.append(self.config['net'])
-        opts = collections.OrderedDict({
-            "gateway": "via",
-            "device": "dev",
-            "table": "table",
-            "metric": "metric",
-        })
-        for opt in opts.keys():
+        # The "default_route" flow forces "table", so it is later removed
+        for opt, keyword in opts.items():
             try:
                 cmd.extend([
-                    opts[opt],
+                    keyword,
                     str(self.config[opt]),
                 ])
             except KeyError:
@@ -230,26 +239,37 @@ class RoutingEntryRule(RoutingEntryType):
         self.config = config
 
     def create_line(self):
-        """Creates and returns the command line for this rule object."""
+        """Creates and returns the command line for this rule object.
+
+        Variations:
+        # any dst, table main, default prio
+        ip rule add from X.X.X.X/XX
+        # table main, default prio
+        ip rule add from X.X.X.X/XX to Y.Y.Y.Y/YY
+        # default prio
+        ip rule add from X.X.X.X/XX to Y.Y.Y.Y/YY table mytable
+        # table main
+        ip rule add from X.X.X.X/XX to Y.Y.Y.Y/YY priority NNN
+        # all is specified
+        ip rule add from X.X.X.X/XX to Y.Y.Y.Y/YY table mytable priority NNN
+        # any dst, default prio
+        ip rule add from X.X.X.X/XX table mytable
+        # any dst
+        ip rule add from X.X.X.X/XX table mytable priority NNN
+        # any dst, table main
+        ip rule add from X.X.X.X/XX priority NNN
+        """
         cmd = ["ip", "rule", "add", "from", self.config['from-net']]
-
-        if 'to-net' in self.config.keys():
-            cmd.extend([
-                "to",
-                self.config["to-net"],
-                "lookup",
-            ])
-            try:
-                cmd.append(self.config['table'])
-            except KeyError:
-                cmd.append("main")
-            return cmd
-
-        for opt in ["table", "priority"]:
+        opts = collections.OrderedDict({
+            "to-net": "to",
+            "table": "table",
+            "priority": "priority",
+        })
+        for opt, keyword in opts.items():
             try:
                 cmd.extend([
-                    opt,
-                    self.config[opt],
+                    keyword,
+                    str(self.config[opt]),
                 ])
             except KeyError:
                 pass
