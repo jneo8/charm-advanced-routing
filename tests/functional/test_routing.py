@@ -10,7 +10,6 @@ import pytest
 pytestmark = pytest.mark.asyncio
 SERIES = [
     'bionic',
-    # 'xenial',
 ]
 CHARM_BUILD_DIR = os.getenv('JUJU_REPOSITORY', '/tmp/charm-builds/advanced-routing').rstrip('/')
 

@@ -1,5 +1,5 @@
 name: advanced-routing
-maintainer: LMA Charmers <llama-charmers@lists.launchpad.net>
+maintainer: LMA Charmers <llama-charmers@lists.ubuntu.com>
 summary: Routing configuration editor
 description: |
   This charm can be deployed alongside principal charms to enable custom
@@ -7,7 +7,6 @@ description: |
 subordinate: true
 series:
   - bionic
-  - xenial
 tags:
     - misc
 requires:
