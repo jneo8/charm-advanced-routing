@@ -84,7 +84,7 @@ class AdvancedRoutingHelper:
         hookenv.log('Writing {}'.format(self.ifup_path), level=hookenv.INFO)
         # Modify if-up.d
         with open(str(self.ifup_path), 'w') as ifup:
-            ifup.write("# This file is managed by Juju.\nip route flush cache\n")
+            ifup.write("#!/bin/sh\n# This file is managed by Juju.\nip route flush cache\n")
             for entry in RoutingEntryType.entries:
                 ifup.write(entry.addline)
         os.chmod(str(self.ifup_path), 0o755)
@@ -92,7 +92,7 @@ class AdvancedRoutingHelper:
         hookenv.log('Writing {}'.format(self.ifdown_path), level=hookenv.INFO)
         # Modify if-down.d
         with open(str(self.ifdown_path), 'w') as ifdown:
-            ifdown.write("# This file is managed by Juju.\n")
+            ifdown.write("#!/bin/sh\n# This file is managed by Juju.\n")
             for entry in list(reversed(RoutingEntryType.entries)):
                 ifdown.write(entry.removeline)
             ifdown.write("ip route flush cache\n")
@@ -147,8 +147,13 @@ class AdvancedRoutingHelper:
     def if_scripts(self):
         """Returns path to folders by series."""
         release = lsb_release()['DISTRIB_CODENAME'].lower()
-        if_path = (self.net_tools_up_path
-                   if CompareHostReleases(release) < "bionic" else self.netplan_up_path)
-        ifup_script = if_path / self.if_script
-        ifdown_script = if_path / self.if_script
+        if CompareHostReleases(release) < "bionic":
+            ifup_path = self.net_tools_up_path
+            ifdown_path = self.net_tools_down_path
+        else:
+            ifup_path = self.netplan_up_path
+            ifdown_path = self.netplan_down_path
+
+        ifup_script = ifup_path / self.if_script
+        ifdown_script = ifdown_path / self.if_script
         return [ifup_script, ifdown_script]

@@ -103,13 +103,17 @@ async def test_juju_routing(cfg, file_contents, file_exists, deploy_app, model):
     assert if_down_expected_content == if_down_content
 
     series = deploy_app.name.split("-")[-1]
-    ifup_path = ("/etc/network/if-up.d"
-                 if series >= "xenial" or series < "bionic"
-                 else "/etc/networkd-dispatcher/routable.d")
-    ifup_filename = "{}/95-juju_routing".format(ifup_path)
-    ifup_exists = await file_exists(path=ifup_filename, target=unit)
+    if series >= "xenial" or series < "bionic":
+        ifup_path = "/etc/network/if-up.d"
+        ifdown_path = "/etc/network/if-down.d"
+    else:
+        ifup_path = "/etc/networkd-dispatcher/routable.d"
+        ifdown_path = "/etc/networkd-dispatcher/off.d"
 
-    assert ifup_exists == "1\n"
+    for if_path in [ifup_path, ifdown_path]:
+        filename = "{}/95-juju_routing".format(if_path)
+        if_exists = await file_exists(path=filename, target=unit)
+        assert if_exists == "1\n"
 
 
 async def test_juju_routing_disable(file_exists, unit, deploy_app, model):
@@ -125,13 +129,18 @@ async def test_juju_routing_disable(file_exists, unit, deploy_app, model):
     )
 
     series = deploy_app.name.split("-")[-1]
-    ifup_path = ("/etc/network/if-up.d"
-                 if "xenial" <= series < "bionic"
-                 else "/etc/networkd-dispatcher/routable.d")
-    ifup_filename = "{}/95-juju_routing".format(ifup_path)
-    ifup_exists = await file_exists(path=ifup_filename, target=unit)
 
-    assert ifup_exists == "0\n"
+    if series >= "xenial" or series < "bionic":
+        ifup_path = "/etc/network/if-up.d"
+        ifdown_path = "/etc/network/if-down.d"
+    else:
+        ifup_path = "/etc/networkd-dispatcher/routable.d"
+        ifdown_path = "/etc/networkd-dispatcher/off.d"
+
+    for if_path in [ifup_path, ifdown_path]:
+        filename = "{}/95-juju_routing".format(if_path)
+        if_exists = await file_exists(path=filename, target=unit)
+        assert if_exists == "0\n"
 
 
 async def test_apply_changes_disabled(file_exists, deploy_app, unit):

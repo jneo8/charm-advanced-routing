@@ -26,6 +26,7 @@ JSON_CONFIGS = [
             },
         ],
         "expected_ifup": (
+            "#!/bin/sh\n"
             "# This file is managed by Juju.\n"
             "ip route flush cache\n"
             "# Table: name SF1\n"
@@ -34,6 +35,7 @@ JSON_CONFIGS = [
             "ip rule add from 192.170.2.0/24 to 192.170.2.0/24 table SF1 priority 101\n"
         ),
         "expected_ifdown": (
+            "#!/bin/sh\n"
             "# This file is managed by Juju.\n"
             "ip rule del from 192.170.2.0/24 to 192.170.2.0/24 table SF1 priority 101\n"
             "ip route del 6.6.6.0/24 via 10.191.86.2\n"
@@ -66,6 +68,7 @@ JSON_CONFIGS = [
             },
         ],
         "expected_ifup": (
+            "#!/bin/sh\n"
             "# This file is managed by Juju.\n"
             "ip route flush cache\n"
             "# Table: name mytable\n"
@@ -74,6 +77,7 @@ JSON_CONFIGS = [
             "ip rule add from 10.205.6.0/24 table mytable priority 101\n"
         ),
         "expected_ifdown": (
+            "#!/bin/sh\n"
             "# This file is managed by Juju.\n"
             "ip rule del from 10.205.6.0/24 table mytable priority 101\n"
             "ip rule del from 10.205.6.0/24 to 1.1.1.1/32 priority 100\n"
