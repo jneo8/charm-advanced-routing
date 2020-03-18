@@ -76,6 +76,7 @@ async def test_juju_routing(cfg, file_contents, file_exists, deploy_app, model):
     await deploy_app.set_config({
         'advanced-routing-config': json.dumps(json_config),
         'enable-advanced-routing': 'true',
+        'action-managed-update': 'false',
     })
 
     status, agent_status, message = "active", "idle", "Unit is ready"
@@ -131,3 +132,39 @@ async def test_juju_routing_disable(file_exists, unit, deploy_app, model):
     ifup_exists = await file_exists(path=ifup_filename, target=unit)
 
     assert ifup_exists == "0\n"
+
+
+async def test_apply_changes_disabled(file_exists, deploy_app, unit):
+    """Tests that apply-changes action complete."""
+    await deploy_app.set_config({
+        'enable-advanced-routing': 'false',
+        'action-managed-update': 'true',
+    })
+    action = await unit.run_action('apply-changes')
+    action = await action.wait()
+    assert action.status == 'failed'
+
+
+async def test_apply_changes(file_exists, deploy_app, unit):
+    """Tests that apply-changes action complete."""
+    ifup_path = "/etc/networkd-dispatcher/routable.d"
+    ifup_filename = "{}/95-juju_routing".format(ifup_path)
+    ifup_exists = await file_exists(path=ifup_filename, target=unit)
+
+    # ifup file doesn't exist before running the action
+    assert ifup_exists == "0\n"
+
+    await deploy_app.set_config({
+        'enable-advanced-routing': 'true',
+        'action-managed-update': 'true',
+    })
+
+    unit = deploy_app.units[0]
+    action = await unit.run_action('apply-changes')
+    action = await action.wait()
+    assert action.status == 'completed'
+
+    ifup_exists = await file_exists(path=ifup_filename, target=unit)
+
+    # ifup file exists after running the action
+    assert ifup_exists == "1\n"

@@ -43,6 +43,11 @@ class AdvancedRoutingHelper:
         """Returns boolean according to Juju config input."""
         return self.charm_config["enable-advanced-routing"]
 
+    @property
+    def is_action_managed(self):
+        """Returns boolean according to Juju config input."""
+        return self.charm_config["action-managed-update"]
+
     def pre_setup(self):
         """Create folder path for the ifup/down scripts."""
         for ifpath in ["if-up", "if-down"]:

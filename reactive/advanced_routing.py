@@ -35,6 +35,10 @@ def install_routing():
         status.blocked("Advanced routing is disabled")
         return
 
+    if advanced_routing.is_action_managed:
+        status.blocked("Changes pending via apply-changes action")
+        return
+
     if not apply_config():
         return
 
@@ -46,6 +50,10 @@ def install_routing():
 @when('config.changed')
 def reconfigure_routing():
     """Handle routing configuration change."""
+    if advanced_routing.is_action_managed:
+        status.blocked("Changes pending via apply-changes action")
+        return
+
     status.maintenance('Removing routes')
     advanced_routing.remove_routes()
     if not advanced_routing.is_advanced_routing_enabled:

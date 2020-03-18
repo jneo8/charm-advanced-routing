@@ -1,0 +1,2 @@
+apply-changes:
+  description: Parses the advanced-routing-config input if enable-advanced-routing is enabled

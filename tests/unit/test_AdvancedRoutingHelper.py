@@ -1,7 +1,7 @@
 """Main unit testing module."""
 import pathlib
 import shutil
-from unittest import mock
+import unittest.mock as mock
 
 
 import routing_validator

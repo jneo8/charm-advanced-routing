@@ -15,3 +15,8 @@ options:
           "device": "eth5"
       }, { ... } ]
       @ see example_config.yaml for more examples
+  action-managed-update:
+    type: boolean
+    default: True
+    description: |
+      Changes need to be applied by running the 'apply-changes' action.

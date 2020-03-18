@@ -11,19 +11,9 @@ import pytest
 def mock_layers(monkeypatch):
     """Layers mock."""
     import sys
-    sys.modules['charms.layer'] = mock.Mock()
-    sys.modules['reactive'] = mock.Mock()
-
-    # Mock any functions in layers that need to be mocked here
-    def options(layer):
-        # mock options for layers here
-        if layer == 'example-layer':
-            options = {'port': 9999}
-            return options
-        else:
-            return None
-
-    monkeypatch.setattr('advanced_routing_helper.layer.options', options)
+    sys.modules['charms'] = mock.MagicMock()
+    sys.modules['charms.layer'] = mock.MagicMock()
+    sys.modules['charms.reactive'] = mock.MagicMock()
 
 
 @pytest.fixture
@@ -59,7 +49,7 @@ def mock_charm_dir(monkeypatch):
 
 
 @pytest.fixture
-def advanced_routing_helper(tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
+def advanced_routing_helper(mock_layers, tmpdir, mock_hookenv_config, mock_charm_dir, monkeypatch):
     """Routing fixture."""
     from advanced_routing_helper import AdvancedRoutingHelper
     AdvancedRoutingHelper.common_location = pathlib.Path("/tmp/test/charm-advanced-routing")
