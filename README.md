@@ -31,15 +31,15 @@ table: routing table to put the rules in (used in rules)
 
 route: defines a static route with the following params:
  - default_route: should this be a default route or not (boolean: true|false) (optional, requires gateway and table)
- - net:           IPv4 CIDR for a destination network (string) (mutually exclusive with default_route, and requires gateway)
- - gateway:       IPv4 gateway address (string) (required)
+ - net:           IPv4 CIDR for a destination network (string) (mutually exclusive with default_route, and requires gateway or device)
+ - gateway:       IPv4 gateway address (string) (either device or gateway is required)
  - table:         routing table name (string) (optional, except if default_route is used)
  - metric:        metric for the route (int) (optional)
- - device:        device (interface) (string) (optional)
+ - device:        device (interface) (string) (either device or gateway is required)
 
 rule:
- - from-net: IPv4 CIDR source network (string) (required)
- - to-net: IPv4 CIDR destination network (string) (optional)
+ - from-net: IPv4 CIDR source network or "all" (string) (required)
+ - to-net: IPv4 CIDR destination network or "all" (string) (optional)
  - table: routing table name (string) (optional, default is main)
  - priority: priority (int) (optional)
 
@@ -55,7 +55,6 @@ settings:
       }, {
           "type": "route",
           "default_route": true,  
-          "net": "192.170.1.0/24",
           "gateway": "10.191.86.2",      
           "table": "SF1",
           "metric": 101,

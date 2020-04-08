@@ -184,24 +184,31 @@ class RoutingEntryRoute(RoutingEntryType):
         })
         cmd = ["ip", "route", "replace"]
 
+        gateway = self.config.get("gateway")
         # default route in table
         if 'default_route' in self.config.keys():
             cmd.extend([
                 "default",
                 "via",
-                self.config["gateway"],
+                gateway,  # Validated to be non-nil in validator
                 "table",
                 self.config["table"],
             ])
             # already enforced
             del opts["table"]
         else:
-            # route in any given table or none
-            cmd.extend([
-                self.config['net'],
-                "via",
-                self.config["gateway"],
-            ])
+            if gateway:
+                # route in any given table or none
+                cmd.extend([
+                    self.config['net'],
+                    "via",
+                    self.config["gateway"],
+                ])
+            else:
+                # directly connected route
+                cmd.extend([
+                    self.config['net']
+                ])
 
         # The "default_route" flow forces "table", so it is later removed
         for opt, keyword in opts.items():

@@ -118,8 +118,10 @@ class RoutingConfigValidator:
     def verify_route_gateway(self, conf):
         """Verify route gateway in conf.
 
-        "gateway" key is a required configuration parameter.
+        "gateway" key is a required configuration parameter for default routes
         """
+        if not conf.get("default_route"):
+            return
         try:
             ipaddress.ip_address(conf['gateway'])
             return
@@ -195,15 +197,16 @@ class RoutingConfigValidator:
     def verify_route_device(self, conf):
         """Verify route device.
 
-        "device" is an optional configuration parameter.
+        Need either "device" or "gateway"
         """
         try:
             if conf["device"] not in netifaces.interfaces():
                 msg = 'Device {} does not exist'.format(conf['device'])
                 self.report_error(msg)
         except KeyError:
-            # key is optional
-            pass
+            if "gateway" in conf:
+                return
+            self.report_error("Need either 'gateway' or 'device'")
 
     def verify_route_metric(self, conf):
         """Verify route metric.
@@ -237,8 +240,9 @@ class RoutingConfigValidator:
         "from-net" key is a required configuration parameter.
         """
         try:
-            ipaddress.ip_network(conf['from-net'])
-            return
+            fro = conf['from-net']
+            if fro == 'all' or ipaddress.ip_network(fro):
+                return
         except KeyError:
             msg = "Bad network config: rule entries need the 'from-net' def"
         except ValueError as error:
@@ -251,8 +255,9 @@ class RoutingConfigValidator:
         "to-net" key is a optional configuration parameter.
         """
         try:
-            ipaddress.ip_network(conf['to-net'])
-            return
+            to = conf['to-net']
+            if to == 'all' or ipaddress.ip_network(to):
+                return
         except KeyError:
             # key is optional
             pass
