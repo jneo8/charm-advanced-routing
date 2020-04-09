@@ -294,5 +294,17 @@ class RoutingEntryRule(RoutingEntryType):
     def is_duplicate(self):
         """Ip rule add does not prevent duplicates in older kernel versions."""
         # https://patchwork.ozlabs.org/patch/624553/
-        parts = ' '.join(self.create_line()).split("add ")
-        return self.exec_cmd(["ip", "rule", "|", "grep", "\"" + parts[1] + "\""], pipe=True)
+        matchparams = ["from", self.config['from-net']]
+        to = self.config.get("to-net")
+        if to and to != "all":  # ip rule omits to=all as it's implied
+            matchparams.extend(("to", to))
+        matchparams.extend(("lookup", self.config.get("table", "main")))
+        matchline = " ".join(matchparams)
+        prio = str(self.config.get("priority", ""))
+        existing_rules = subprocess.check_output(["ip", "rule"]).decode("utf8").splitlines()
+        for rule in existing_rules:
+            rule = rule.strip()
+            if rule.startswith(prio) and rule.endswith(matchline):
+                hookenv.log("Found dup rule: {}".format(matchline), level=hookenv.DEBUG)
+                return True
+        return False
