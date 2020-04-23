@@ -87,7 +87,7 @@ JSON_CONFIGS = [
             "ip route flush cache\n"
         ),
     },
-    {
+    {  # Test "all" in rules, and test a directly connected route
         "input": [
             {"type": "table", "table": "mytable"},
             {

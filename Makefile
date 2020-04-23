@@ -1,3 +1,9 @@
+ifndef CHARM_BUILD_DIR
+  CHARM_BUILD_DIR := /tmp/charm-builds
+  export CHARM_BUILD_DIR
+  $(warning Warning CHARM_BUILD_DIR was not set, defaulting to $(CHARM_BUILD_DIR))
+endif
+
 help:
 	@echo "This project supports the following targets"
 	@echo ""
@@ -26,10 +32,10 @@ functional: build
 	    tox -e functional
 
 build:
-	@echo "Building charm to base directory $(JUJU_REPOSITORY)"
+	@echo "Building charm to base directory $(CHARM_BUILD_DIR)/advanced-routing"
 #	@-git describe --tags > ./repo-info
-	@LAYER_PATH=./layers INTERFACE_PATH=./interfaces TERM=linux \
-		JUJU_REPOSITORY=$(JUJU_REPOSITORY) charm build . --force
+	@CHARM_LAYERS_DIR=./layers CHARM_INTERFACES_DIR=./interfaces TERM=linux \
+		charm build --build-dir=$(CHARM_BUILD_DIR) . --force
 
 release: clean build
 	@echo "Charm is built at $(JUJU_REPOSITORY)/builds"

@@ -97,6 +97,7 @@ class RoutingEntryTable(RoutingEntryType):
     table_index_offset = 100  # static
     tables = set([])
     tables_all = set([])
+    builtin_tables = { "main", "local", "default" }
 
     def __init__(self, config):
         """Adds unique tables to the tables list."""
@@ -153,9 +154,16 @@ class RoutingEntryTable(RoutingEntryType):
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script."""
+        """Returns the remove line for the ifdown script.
+
+        Will skip built-in tables (main, local or default table)
+        """
+        table = self.config['table']
+        if table in self.builtin_tables:
+            hookenv.log("Skip removeline for builtin table {}".format(table))
+            return "# Skip removing builtin table {}\n".format(table)
         return ("ip route flush table {table}\n"
-                "ip rule del table {table}\n").format(table=self.config['table'])
+                "ip rule del table {table}\n").format(table=table)
 
 
 class RoutingEntryRoute(RoutingEntryType):

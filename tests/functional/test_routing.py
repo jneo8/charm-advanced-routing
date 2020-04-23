@@ -12,7 +12,8 @@ SERIES = [
     'bionic',
     # 'focal',
 ]
-CHARM_BUILD_DIR = os.getenv('JUJU_REPOSITORY', '/tmp/charm-builds/advanced-routing').rstrip('/')
+CHARM_BUILD_DIR = os.getenv('CHARM_BUILD_DIR', '/tmp/charm-builds')
+BUILT_CHARM = os.path.join(CHARM_BUILD_DIR, "advanced-routing")
 
 ############
 # FIXTURES #
@@ -31,7 +32,7 @@ async def deploy_app(request, model):
         channel='stable'
     )
     advanced_routing = await model.deploy(
-        CHARM_BUILD_DIR,
+        BUILT_CHARM,
         application_name='advanced-routing-{}'.format(release),
         series=release,
         num_units=0,
