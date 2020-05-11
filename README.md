@@ -152,12 +152,14 @@ advanced-routing:
           "default_route": true,
           "gateway": "10.10.51.1",
           "table": "SF1",
-          "metric": 101,
-          "device": "eth0"
       }, {
           "type": "rule",
           "from-net": "10.10.51.0/24",
           "to-net": "10.10.51.0/24",
+          "priority": 100,     
+      }, {
+          "type": "rule",
+          "from-net": "10.10.51.0/24",
           "table": "SF1",
           "priority": 101
       } ]
@@ -180,7 +182,7 @@ juju run -u ubuntu/0 "sudo systemctl stop charm-pre-install-policy-routing ; sud
 Using the action apply-changes, add the routes using the advance-routing charm
 
 ```
-juju run-action advanced-routing/0 apply-changes
+juju run-action advanced-routing/0 apply-changes --wait
 ```
 
 # Testing                                                                       
