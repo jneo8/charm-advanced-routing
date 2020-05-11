@@ -77,6 +77,114 @@ settings:
 
 The `example_config.yaml` file is also provided with the codebase.
 
+
+# Migration steps from the policy-routing charm
+
+### Initial deployment:
+
+The following steps assume that an ubuntu unit with a subordinate policy-routing charm 
+with the following config has been deployed:
+
+```
+application: policy-routing
+application-config:
+  trust:
+    default: false
+    description: Does this application have access to trusted credentials
+    source: default
+    type: bool
+    value: false
+charm: policy-routing
+settings:
+  cidr:
+    description: |
+      CIDR of the network interface to setup a policy routing.
+      e.g. 192.168.0.0/24
+    source: user
+    type: string
+    value: 10.10.51.0/24
+  gateway:
+    description: |
+      The gateway to be used from the network interface specified with
+      the CIDR. e.g. 192.168.0.254
+    source: user
+    type: string
+    value: 10.10.51.1
+```
+
+juju status looks like:
+
+```
+$ juju status 
+Model        Controller  Cloud/Region         Version  SLA          Timestamp
+model1  lxd         localhost/localhost  2.7.2    unsupported  11:52:19Z
+
+App                       Version     Status   Scale  Charm                     Store       Rev  OS      Notes  
+policy-routing                        waiting      0  policy-routing            jujucharms    3  ubuntu  
+ubuntu                    18.04       active       1  ubuntu                    jujucharms   15  ubuntu  
+
+
+Unit                   Workload  Agent      Machine  Public address  Ports               Message
+ubuntu/0*              active    idle       127      10.0.8.155                          ready
+  policy-routing/0*    active    idle                10.0.8.155                          Unit ready
+
+```
+
+### Deploy advanced-routing charm :
+
+- ``` juju deploy cs:advanced-routing ```
+- ``` juju add-relation ubuntu advanced-routing ```
+
+Advanced-routing is in status blocked with message: "Please disable charm-policy-routing"
+
+Apply the following config:
+
+```
+$ cat ./advanced_routing_config 
+advanced-routing:
+  enable-advanced-routing: true
+  advanced-routing-config: |
+      [ {
+          "type": "table",
+          "table": "SF1"
+      }, {
+          "type": "route",
+          "default_route": true,
+          "gateway": "10.10.51.1",
+          "table": "SF1",
+      }, {
+          "type": "rule",
+          "from-net": "10.10.51.0/24",
+          "to-net": "10.10.51.0/24",
+          "priority": 100,     
+      }, {
+          "type": "rule",
+          "from-net": "10.10.51.0/24",
+          "table": "SF1",
+          "priority": 101
+      } ]
+```
+
+with the command:
+
+```
+juju config advanced-routing --file ./advanced_routing_config
+```
+
+### Disable the old config
+
+```
+juju run -u ubuntu/0 "sudo systemctl stop charm-pre-install-policy-routing ; sudo systemctl disable charm-pre-install-policy-routing ; sudo rm -f /etc/systemd/system/charm-pre-install-policy-routing.service; "
+```
+
+### Apply the routing configuration with the new charm
+
+Using the action apply-changes, add the routes using the advance-routing charm
+
+```
+juju run-action advanced-routing/0 apply-changes --wait
+```
+
 # Testing                                                                       
 To run lint tests:
 ```bash
