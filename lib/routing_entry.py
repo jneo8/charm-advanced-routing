@@ -97,33 +97,18 @@ class RoutingEntryTable(RoutingEntryType):
     table_index_offset = 100  # static
     tables = set([])
     tables_all = set([])
+    builtin_tables = {"main", "local", "default"}
 
     def __init__(self, config):
         """Adds unique tables to the tables list."""
         hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
-        RoutingEntryTable.tables_all.update(self.store_default_tables)
+        RoutingEntryTable.tables_all.update(self.builtin_tables)
 
         if not self.table_exists:
             RoutingEntryTable.tables.add(self.config["table"])
             RoutingEntryTable.tables_all.add(self.config["table"])
-
-    @property
-    def store_default_tables(self):
-        """Store the default tables.
-
-        Default tables don't need to be created by the user.
-        """
-        try:
-            with open(self.default_table_file) as fd:
-                # ['local', 'main', 'default', 'unspec']
-                return set([
-                    line.split()[1] for line in fd.readlines()
-                    if line.strip() and not line.strip().startswith("#")
-                ])
-        except FileNotFoundError:
-            return set([])
 
     @property
     def table_exists(self):
@@ -153,9 +138,16 @@ class RoutingEntryTable(RoutingEntryType):
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script."""
+        """Returns the remove line for the ifdown script.
+
+        Will skip built-in tables (main, local or default table)
+        """
+        table = self.config['table']
+        if table in self.builtin_tables:
+            hookenv.log("Skip removeline for builtin table {table}".format(table=table))
+            return "# Skip removing builtin table {table}\n".format(table=table)
         return ("ip route flush table {table}\n"
-                "ip rule del table {table}\n").format(table=self.config['table'])
+                "ip rule del table {table}\n").format(table=table)
 
 
 class RoutingEntryRoute(RoutingEntryType):
