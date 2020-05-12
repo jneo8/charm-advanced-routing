@@ -87,4 +87,88 @@ JSON_CONFIGS = [
             "ip route flush cache\n"
         ),
     },
+    {
+        "input": [
+            {"type": "table", "table": "mytable"},
+            {
+                "type": "route",
+                "net": "1.1.2.0/24",
+                "device": "eth0",
+                "table": "mytable",
+            },
+            {
+                "type": "rule",
+                "from-net": "all",
+                "to-net": "1.1.2.1/32",
+                "priority": 100,
+            },
+            {
+                "type": "rule",
+                "from-net": "10.205.7.0/24",
+                "to-net": "all",
+                "table": "mytable",
+                "priority": 101,
+            },
+        ],
+        "expected_ifup": (
+            "#!/bin/sh\n"
+            "# This file is managed by Juju.\n"
+            "ip route flush cache\n"
+            "# Table: name mytable\n"
+            "ip route replace 1.1.2.0/24 dev eth0 table mytable\n"
+            "ip rule add from all to 1.1.2.1/32 priority 100\n"
+            "ip rule add from 10.205.7.0/24 to all table mytable priority 101\n"
+        ),
+        "expected_ifdown": (
+            "#!/bin/sh\n"
+            "# This file is managed by Juju.\n"
+            "ip rule del from 10.205.7.0/24 to all table mytable priority 101\n"
+            "ip rule del from all to 1.1.2.1/32 priority 100\n"
+            "ip route del 1.1.2.0/24 dev eth0 table mytable\n"
+            "ip route flush table mytable\n"
+            "ip rule del table mytable\n"
+            "ip route flush cache\n"
+        ),
+    },
+    {
+        "input": [
+            {"type": "table", "table": "mytable"},
+            {
+                "type": "route",
+                "net": "1.1.2.0/24",
+                "device": "eth0",
+            },
+            {
+                "type": "rule",
+                "from-net": "all",
+                "to-net": "1.1.2.1/32",
+                "priority": 100,
+            },
+            {
+                "type": "rule",
+                "from-net": "10.205.7.0/24",
+                "to-net": "all",
+                "table": "mytable",
+                "priority": 101,
+            },
+        ],
+        "expected_ifup": (
+            "#!/bin/sh\n"
+            "# This file is managed by Juju.\n"
+            "ip route flush cache\n"
+            "# Table: name mytable\n"
+            "ip route replace 1.1.2.0/24 dev eth0\n"
+            "ip rule add from all to 1.1.2.1/32 priority 100\n"
+            "ip rule add from 10.205.7.0/24 to all table mytable priority 101\n"
+        ),
+        "expected_ifdown": (
+            "#!/bin/sh\n"
+            "# This file is managed by Juju.\n"
+            "ip rule del from 10.205.7.0/24 to all table mytable priority 101\n"
+            "ip rule del from all to 1.1.2.1/32 priority 100\n"
+            "ip route flush table mytable\n"
+            "ip rule del table mytable\n"
+            "ip route flush cache\n"
+        ),
+    },
 ]
