@@ -5,6 +5,8 @@ as well as routes to configured services. A list of hash maps, in JSON format, i
 
 Charm supports IPv4 addressing.
 
+**Warning:** if configured incorrectly, this has the potential to disrupt your units networking setup. Be sure to test your configuration before rolling it out to production. Note the charm provides an apply-changes action, which allows you to apply routing changes per unit as a way to mitigate risk
+
 
 # Build
 ```
