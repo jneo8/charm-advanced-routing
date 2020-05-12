@@ -9,8 +9,8 @@ import pytest
 
 pytestmark = pytest.mark.asyncio
 SERIES = [
+    'focal',
     'bionic',
-    # 'focal',
 ]
 CHARM_BUILD_DIR = os.getenv('CHARM_BUILD_DIR', '/tmp/charm-builds')
 BUILT_CHARM = os.path.join(CHARM_BUILD_DIR, "advanced-routing")
