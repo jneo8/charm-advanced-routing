@@ -92,11 +92,11 @@ async def test_juju_routing(cfg, file_contents, file_exists, deploy_app, model):
 
     common_path = "/usr/local/lib/juju-charm-advanced-routing"
     up_path = "{}/if-up/95-juju_routing".format(common_path)
-    down_path = "{}/if-down/95-juju_routing".format(common_path)
+    cleanup_path = "{}/cleanup/95-juju_routing".format(common_path)
     unit = deploy_app.units.pop()
 
     if_up_content = await file_contents(path=up_path, target=unit)
-    if_down_content = await file_contents(path=down_path, target=unit)
+    if_down_content = await file_contents(path=cleanup_path, target=unit)
 
     if_up_expected_content = cfg["expected_ifup"]
     if_down_expected_content = cfg["expected_ifdown"]
@@ -107,15 +107,12 @@ async def test_juju_routing(cfg, file_contents, file_exists, deploy_app, model):
     series = deploy_app.name.split("-")[-1]
     if series >= "xenial" or series < "bionic":
         ifup_path = "/etc/network/if-up.d"
-        ifdown_path = "/etc/network/if-down.d"
     else:
         ifup_path = "/etc/networkd-dispatcher/routable.d"
-        ifdown_path = "/etc/networkd-dispatcher/off.d"
 
-    for if_path in [ifup_path, ifdown_path]:
-        filename = "{}/95-juju_routing".format(if_path)
-        if_exists = await file_exists(path=filename, target=unit)
-        assert if_exists == "1\n"
+    ifup_expected_file_path = "{}/95-juju_routing".format(ifup_path)
+    ifup_exists = await file_exists(path=ifup_expected_file_path, target=unit)
+    assert ifup_exists == "1\n"
 
 
 async def test_juju_routing_disable(file_exists, unit, deploy_app, model):
