@@ -21,20 +21,18 @@ class PolicyRoutingExists(Exception):
 class AdvancedRoutingHelper:
     """Helper class for routing."""
 
-    if_script = '95-juju_routing'
+    routing_script_name = '95-juju_routing'
     common_location = pathlib.Path('/usr/local/lib/juju-charm-advanced-routing')
-    net_tools_up_path = pathlib.Path('/etc/network/if-up.d')
-    net_tools_down_path = pathlib.Path('/etc/network/if-down.d')
-    netplan_up_path = pathlib.Path('/etc/networkd-dispatcher/routable.d')
-    netplan_down_path = pathlib.Path('/etc/networkd-dispatcher/off.d')
-    policy_routing_service_path = pathlib.Path('/etc/systemd/system')
-    table_name_file = pathlib.Path('/etc/iproute2/rt_tables.d/juju-managed.conf')
-    ifup_path = common_location / "if-up" / if_script
-    ifdown_path = common_location / "if-down" / if_script
+    net_tools_up_dir_path = pathlib.Path('/etc/network/if-up.d')
+    netplan_up_dir_path = pathlib.Path('/etc/networkd-dispatcher/routable.d')
+    policy_routing_service_dir_path = pathlib.Path('/etc/systemd/system')
+    table_name_path = pathlib.Path('/etc/iproute2/rt_tables.d/juju-managed.conf')
 
     def __init__(self):
         """Init function."""
         hookenv.log('Init {}'.format(self.__class__.__name__), level=hookenv.INFO)
+        self.common_ifup_path = self.common_location / "if-up" / self.routing_script_name
+        self.common_cleanup_path = self.common_location / 'cleanup' / self.routing_script_name
         self.charm_config = hookenv.config()
         self.pre_setup()
 
@@ -49,16 +47,16 @@ class AdvancedRoutingHelper:
         return self.charm_config["action-managed-update"]
 
     def pre_setup(self):
-        """Create folder path for the ifup/down scripts."""
-        for ifpath in ["if-up", "if-down"]:
-            ifpath_full = self.common_location / ifpath
-            if not ifpath_full.exists():
-                ifpath_full.mkdir(parents=True)
-                hookenv.log('Created {}'.format(ifpath_full), level=hookenv.INFO)
+        """Create folder path for the ifup/cleanup scripts."""
+        for script_path in [self.common_ifup_path, self.common_cleanup_path]:
+            script_path_parent = script_path.parent
+            if not script_path_parent.exists():
+                script_path_parent.mkdir(parents=True)
+                hookenv.log('Created {}'.format(script_path_parent), level=hookenv.INFO)
 
         # check for service file of charm-policy-routing, and block if its present
         policy_routing_svcname = 'charm-pre-install-policy-routing.service'
-        policy_routing_file = self.policy_routing_service_path / policy_routing_svcname
+        policy_routing_file = self.policy_routing_service_dir_path / policy_routing_svcname
         if policy_routing_file.exists():
             hookenv.log(
                 'It looks like charm-policy-routing is enabled.'
@@ -68,11 +66,9 @@ class AdvancedRoutingHelper:
             raise PolicyRoutingExists("Please disable charm-policy-routing")
 
     def post_setup(self):
-        """Symlinks the up/down scripts from the if.up/down or netplan scripts location."""
+        """Symlinks the up script from the if.up or routable.d location."""
         hookenv.log('Symlinking into distro specific network manager', level=hookenv.INFO)
-        ifup_script, ifdown_script = self.if_scripts
-        self.symlink_force(str(self.ifup_path), str(ifup_script))
-        self.symlink_force(str(self.ifdown_path), str(ifdown_script))
+        self.symlink_force(str(self.common_ifup_path), str(self.etc_ifup_path))
 
     def setup(self):
         """Modify the interfaces configurations."""
@@ -81,22 +77,21 @@ class AdvancedRoutingHelper:
         routing_validator.read_configurations(self.charm_config["advanced-routing-config"])
         routing_validator.verify_config()
 
-        hookenv.log('Writing {}'.format(self.ifup_path), level=hookenv.INFO)
+        hookenv.log('Writing {}'.format(self.common_ifup_path), level=hookenv.INFO)
         # Modify if-up.d
-        with open(str(self.ifup_path), 'w') as ifup:
-            ifup.write("#!/bin/sh\n# This file is managed by Juju.\nip route flush cache\n")
+        with open(str(self.common_ifup_path), 'w') as ifup_file:
+            ifup_file.write("#!/bin/sh\n# This file is managed by Juju.\nip route flush cache\n")
             for entry in RoutingEntryType.entries:
-                ifup.write(entry.addline)
-        os.chmod(str(self.ifup_path), 0o755)
+                ifup_file.write(entry.addline)
+        os.chmod(str(self.common_ifup_path), 0o755)
 
-        hookenv.log('Writing {}'.format(self.ifdown_path), level=hookenv.INFO)
-        # Modify if-down.d
-        with open(str(self.ifdown_path), 'w') as ifdown:
-            ifdown.write("#!/bin/sh\n# This file is managed by Juju.\n")
+        hookenv.log('Writing {}'.format(self.common_cleanup_path), level=hookenv.INFO)
+        with open(str(self.common_cleanup_path), 'w') as cleanup_file:
+            cleanup_file.write("#!/bin/sh\n# This file is managed by Juju.\n")
             for entry in list(reversed(RoutingEntryType.entries)):
-                ifdown.write(entry.removeline)
-            ifdown.write("ip route flush cache\n")
-        os.chmod(str(self.ifdown_path), 0o755)
+                cleanup_file.write(entry.removeline)
+            cleanup_file.write("ip route flush cache\n")
+        os.chmod(str(self.common_cleanup_path), 0o755)
 
         self.post_setup()
 
@@ -109,23 +104,21 @@ class AdvancedRoutingHelper:
     def remove_routes(self):
         """Cleanup job."""
         hookenv.log('Removing routing rules', level=hookenv.INFO)
-        if self.ifdown_path.is_file():
+        if self.common_cleanup_path.is_file():
             try:
-                subprocess.check_call(["sh", "-c", str(self.ifdown_path)])
+                subprocess.check_call(["sh", "-c", str(self.common_cleanup_path)])
             except subprocess.CalledProcessError as err:
                 # Either rules are removed or not valid
                 hookenv.log(
-                    'ifdown script {} failed. Maybe rules are already gone? Error: {}'.format(
-                        self.ifdown_path,
+                    'cleanup script {} failed. Maybe rules are already gone? Error: {}'.format(
+                        self.common_cleanup_path,
                         err,
                     ),
                     hookenv.WARNING,
                 )
 
-        # remove start/stop scripts and table name from iproute2
-        filelist = [self.ifup_path, self.ifdown_path, self.table_name_file]
-        # remove symlinks
-        filelist.extend(self.if_scripts)
+        # remove symlinks, start/stop scripts and iproute2 table name
+        filelist = [self.common_ifup_path, self.common_cleanup_path, self.table_name_path, self.etc_ifup_path]
         for filename in filelist:
             try:
                 filename.unlink()
@@ -144,16 +137,12 @@ class AdvancedRoutingHelper:
                 raise e
 
     @property
-    def if_scripts(self):
-        """Returns path to folders by series."""
+    def etc_ifup_path(self):
+        """Returns path to ifup etc folder based on series."""
         release = lsb_release()['DISTRIB_CODENAME'].lower()
         if CompareHostReleases(release) < "bionic":
-            ifup_path = self.net_tools_up_path
-            ifdown_path = self.net_tools_down_path
+            ifup_dir_path = self.net_tools_up_dir_path
         else:
-            ifup_path = self.netplan_up_path
-            ifdown_path = self.netplan_down_path
-
-        ifup_script = ifup_path / self.if_script
-        ifdown_script = ifdown_path / self.if_script
-        return [ifup_script, ifdown_script]
+            ifup_dir_path = self.netplan_up_dir_path
+        ifup_path = ifup_dir_path / self.routing_script_name
+        return ifup_path

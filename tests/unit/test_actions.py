@@ -17,12 +17,11 @@ class TestActions():
 
         def noop():
             pass
-
         test_obj = advanced_routing_helper
         test_obj.common_location = self.test_dir
-        test_obj.if_script = self.test_script
-        test_obj.ifup_path = self.test_dir / 'if-up' / self.test_script
-        test_obj.ifdown_path = self.test_dir / 'if-down' / self.test_script
+        test_obj.routing_script_name = self.test_script
+        test_obj.common_ifup_path = self.test_dir / 'if-up' / self.test_script
+        test_obj.common_cleanup_path = self.test_dir / 'cleanup' / self.test_script
 
         test_obj.post_setup = noop
         routing_validator.RoutingConfigValidator.__init__ = mock.Mock(return_value=None)

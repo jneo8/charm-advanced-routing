@@ -54,7 +54,6 @@ def advanced_routing_helper(mock_layers, tmpdir, mock_hookenv_config, mock_charm
     from advanced_routing_helper import AdvancedRoutingHelper
     AdvancedRoutingHelper.common_location = pathlib.Path("/tmp/test/charm-advanced-routing")
     helper = AdvancedRoutingHelper()
-
     monkeypatch.setattr('advanced_routing_helper.AdvancedRoutingHelper', lambda: helper)
 
     return helper
