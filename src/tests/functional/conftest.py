@@ -69,7 +69,7 @@ async def model(controller):
 
 @pytest.fixture
 async def get_unit(model):
-    """Returns the requested <app_name>/<unit_number> unit."""
+    """Return the requested <app_name>/<unit_number> unit."""  # noqa D202
 
     async def _get_unit(name):
         try:
@@ -83,12 +83,11 @@ async def get_unit(model):
 
 @pytest.fixture
 async def run_command(get_unit):
-    """
-    Runs a command on a unit.
+    """Run a command on a unit.
 
     :param cmd: Command to be run
     :param target: Unit object or unit name string
-    """
+    """  # noqa D202
 
     async def _run_command(cmd, target):
         unit = target if type(target) is juju.unit.Unit else await get_unit(target)
@@ -100,7 +99,7 @@ async def run_command(get_unit):
 
 @pytest.fixture
 async def get_app(model):
-    """Returns the application by name in the model."""
+    """Return the application by name in the model."""  # noqa D202
 
     async def _get_app(name):
         try:
@@ -113,12 +112,11 @@ async def get_app(model):
 
 @pytest.fixture
 async def file_contents(run_command):
-    """
-    Returns the contents of a file.
+    """Return the contents of a file.
 
     :param path: File path
     :param target: Unit object or unit name string
-    """
+    """  # noqa D202
 
     async def _file_contents(path, target):
         cmd = "cat {}".format(path)
@@ -130,12 +128,11 @@ async def file_contents(run_command):
 
 @pytest.fixture
 async def file_exists(run_command):
-    """
-    Returns 1 or 0 based on if file exists or not in target unit.
+    """Return 1 or 0 based on if file exists or not in target unit.
 
     :param path: File path
     :param target: Unit object or unit name string
-    """
+    """  # noqa D202
 
     async def _file_exists(path, target):
         cmd = '[ -f "{}" ] && echo 1 || echo 0'.format(path)
@@ -147,7 +144,7 @@ async def file_exists(run_command):
 
 @pytest.fixture
 async def reconfigure_app(get_app, model):
-    """Applies a different config to the requested app."""
+    """Apply a different config to the requested app."""  # noqa D202
 
     async def _reconfigure_app(cfg, target):
         application = (

@@ -159,7 +159,7 @@ async def test_juju_routing_disable(file_exists, unit, deploy_app, model):
 async def test_apply_changes_disabled(file_exists, deploy_app, unit):
     """Tests that apply-changes action complete."""
     await deploy_app.set_config(
-        {"enable-advanced-routing": "false", "action-managed-update": "true",}
+        {"enable-advanced-routing": "false", "action-managed-update": "true"}
     )
     action = await unit.run_action("apply-changes")
     action = await action.wait()
@@ -176,7 +176,7 @@ async def test_apply_changes(file_exists, deploy_app, unit):
     assert ifup_exists == "0\n"
 
     await deploy_app.set_config(
-        {"enable-advanced-routing": "true", "action-managed-update": "true",}
+        {"enable-advanced-routing": "true", "action-managed-update": "true"}
     )
 
     unit = deploy_app.units[0]

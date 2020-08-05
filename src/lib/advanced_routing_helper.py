@@ -42,12 +42,12 @@ class AdvancedRoutingHelper:
 
     @property
     def is_advanced_routing_enabled(self):
-        """Returns boolean according to Juju config input."""
+        """Return boolean according to Juju config input."""
         return self.charm_config["enable-advanced-routing"]
 
     @property
     def is_action_managed(self):
-        """Returns boolean according to Juju config input."""
+        """Return boolean according to Juju config input."""
         return self.charm_config["action-managed-update"]
 
     def pre_setup(self):
@@ -122,9 +122,8 @@ class AdvancedRoutingHelper:
             except subprocess.CalledProcessError as err:
                 # Either rules are removed or not valid
                 hookenv.log(
-                    "cleanup script {} failed. Maybe rules are already gone? Error: {}".format(
-                        self.common_cleanup_path, err,
-                    ),
+                    "cleanup script {} failed. Maybe rules are already "
+                    "gone? Error: {}".format(self.common_cleanup_path, err),
                     hookenv.WARNING,
                 )
 
@@ -142,7 +141,7 @@ class AdvancedRoutingHelper:
                 hookenv.log("Nothing to clean up: {}".format(err), hookenv.DEBUG)
 
     def symlink_force(self, target, link_name):
-        """Ensures accurate symlink by removing any existing links."""
+        """Ensure accurate symlink by removing any existing links."""
         try:
             os.symlink(target, link_name)
         except OSError as e:
@@ -154,7 +153,7 @@ class AdvancedRoutingHelper:
 
     @property
     def etc_ifup_path(self):
-        """Returns path to ifup etc folder based on series."""
+        """Return path to ifup etc folder based on series."""
         release = lsb_release()["DISTRIB_CODENAME"].lower()
         if CompareHostReleases(release) < "bionic":
             ifup_dir_path = self.net_tools_up_dir_path

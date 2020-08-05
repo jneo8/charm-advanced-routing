@@ -57,7 +57,7 @@ class RoutingConfigValidator:
         self.config = json_decoded
 
     def verify_config(self):
-        """Iterates the entries in the config checking each type for sanity."""
+        """Iterate entries in the config checking each type for sanity."""
         hookenv.log("Verifying json config", level=hookenv.INFO)
         type_order = ["table", "route", "rule"]
 
@@ -96,7 +96,7 @@ class RoutingConfigValidator:
 
         if not is_valid_name:
             msg = "Bad network config: table name {} must match {}.".format(
-                conf["table"], TABLE_NAME_PATTERN,
+                conf["table"], TABLE_NAME_PATTERN
             )
         else:
             msg = 'Bad network config: duplicate table name "{}"'.format(conf["table"])
@@ -162,7 +162,7 @@ class RoutingConfigValidator:
 
             if not is_valid_name:
                 msg = "Bad network config: table name {} must match {} in {}".format(
-                    conf["table"], TABLE_NAME_PATTERN, conf,
+                    conf["table"], TABLE_NAME_PATTERN, conf
                 )
             else:
                 msg = "Bad network config: table {} reference not defined".format(
@@ -190,12 +190,14 @@ class RoutingConfigValidator:
                     conf
                 )
             elif not table_exists:
-                msg = "Bad network config: Key 'table' missing in default route {}".format(
-                    conf
+                msg = (
+                    "Bad network config: Key 'table' missing in "
+                    "default route {}".format(conf)
                 )
             else:
-                msg = "Bad network config: Key 'table' cannot be 'main' in default route {}".format(
-                    conf
+                msg = (
+                    "Bad network config: Key 'table' cannot be 'main' in "
+                    "default route {}".format(conf)
                 )
             self.report_error(msg)
         except KeyError:

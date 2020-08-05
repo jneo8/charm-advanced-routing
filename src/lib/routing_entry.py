@@ -22,11 +22,11 @@ class RoutingEntryType(metaclass=ABCMeta):
     config = None  # config entry
 
     def __init__(self):
-        """Constructor."""
+        """Init this class."""
         hookenv.log("Init {}".format(self.__class__.__name__), level=hookenv.INFO)
 
     def exec_cmd(self, cmd, pipe=False):
-        """Runs a subprocess and returns True or False on success."""
+        """Run a subprocess and return True or False on success."""
         try:
             if pipe:
                 hookenv.log(
@@ -71,7 +71,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractmethod
     def apply(self):
-        """Applies a rule object to the system.
+        """Apply a rule object to the system.
 
         Not implemented, should override in strategy.
         """
@@ -79,7 +79,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractmethod
     def create_line(self):
-        """Creates and returns the command line for this rule object.
+        """Create and return the command line for this rule object.
 
         Not implemented, should override in strategy.
         """
@@ -87,7 +87,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractproperty
     def addline(self):
-        """Returns the add line for the ifup script.
+        """Return the add line for the ifup script.
 
         Not implemented, should override in strategy.
         """
@@ -95,7 +95,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractproperty
     def removeline(self):
-        """Returns the remove line for the ifdown script.
+        """Return the remove line for the ifdown script.
 
         Not implemented, should override in strategy.
         """
@@ -113,7 +113,7 @@ class RoutingEntryTable(RoutingEntryType):
     builtin_tables = {"main", "local", "default"}
 
     def __init__(self, config):
-        """Adds unique tables to the tables list."""
+        """Add unique tables to the tables list."""
         hookenv.log("Created {}".format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
@@ -133,22 +133,22 @@ class RoutingEntryTable(RoutingEntryType):
         pass
 
     def apply(self):
-        """Opens iproute tables and adds the known list of tables into this file."""
+        """Open iproute tables and add the known list of tables into this file."""
         with open(RoutingEntryTable.table_name_file, "w") as rt_table_file:
             num = RoutingEntryTable.table_index_offset
             for num, tbl in enumerate(RoutingEntryTable.tables):
                 rt_table_file.write(
-                    "{} {}\n".format(num + RoutingEntryTable.table_index_offset, tbl,)
+                    "{} {}\n".format(num + RoutingEntryTable.table_index_offset, tbl)
                 )
 
     @property
     def addline(self):
-        """Returns the add line for the ifup script."""
+        """Return the add line for the ifup script."""
         return "# Table: name {}\n".format(self.config["table"])
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script.
+        """Return the remove line for the ifdown script.
 
         Will skip built-in tables (main, local or default table)
         """
@@ -156,7 +156,7 @@ class RoutingEntryTable(RoutingEntryType):
         if table in self.builtin_tables:
             hookenv.log("Skip removeline for builtin table {table}".format(table=table))
             return "# Skip removing builtin table {table}\n".format(table=table)
-        return ("ip route flush table {table}\n" "ip rule del table {table}\n").format(
+        return ("ip route flush table {table}\nip rule del table {table}\n").format(
             table=table
         )
 
@@ -171,7 +171,7 @@ class RoutingEntryRoute(RoutingEntryType):
         self.config = config
 
     def create_line(self):
-        """Creates and returns the command line for this route object.
+        """Create and return the command line for this route object.
 
         "default_route" and "net" are mutually exclusive. One of them is required
         "default_route" requires "table"
@@ -181,7 +181,7 @@ class RoutingEntryRoute(RoutingEntryType):
 
         """
         opts = collections.OrderedDict(
-            {"device": "dev", "table": "table", "metric": "metric",}
+            {"device": "dev", "table": "table", "metric": "metric"}
         )
         cmd = ["ip", "route", "replace"]
 
@@ -202,9 +202,7 @@ class RoutingEntryRoute(RoutingEntryType):
         else:
             if gateway:
                 # route in any given table or none
-                cmd.extend(
-                    [self.config["net"], "via", self.config["gateway"],]
-                )
+                cmd.extend([self.config["net"], "via", self.config["gateway"]])
             else:
                 # directly connected route
                 cmd.extend([self.config["net"]])
@@ -212,25 +210,23 @@ class RoutingEntryRoute(RoutingEntryType):
         # The "default_route" flow forces "table", so it is later removed
         for opt, keyword in opts.items():
             try:
-                cmd.extend(
-                    [keyword, str(self.config[opt]),]
-                )
+                cmd.extend([keyword, str(self.config[opt])])
             except KeyError:
                 pass
         return cmd
 
     def apply(self):
-        """Applies this rule object to the system."""
+        """Apply this rule object to the system."""
         super().exec_cmd(self.create_line())
 
     @property
     def addline(self):
-        """Returns the add line for the ifup script."""
+        """Return the add line for the ifup script."""
         return " ".join(self.create_line()) + "\n"
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script."""
+        """Return the remove line for the ifdown script."""
         return " ".join(self.create_line()).replace(" replace ", " del ") + "\n"
 
 
@@ -244,7 +240,7 @@ class RoutingEntryRule(RoutingEntryType):
         self.config = config
 
     def create_line(self):
-        """Creates and returns the command line for this rule object.
+        """Create and return the command line for this rule object.
 
         Variations:
         # any dst, table main, default prio
@@ -266,31 +262,29 @@ class RoutingEntryRule(RoutingEntryType):
         """
         cmd = ["ip", "rule", "add", "from", self.config["from-net"]]
         opts = collections.OrderedDict(
-            {"to-net": "to", "table": "table", "priority": "priority",}
+            {"to-net": "to", "table": "table", "priority": "priority"}
         )
         for opt, keyword in opts.items():
             try:
-                cmd.extend(
-                    [keyword, str(self.config[opt]),]
-                )
+                cmd.extend([keyword, str(self.config[opt])])
             except KeyError:
                 pass
         return cmd
 
     def apply(self):
-        """Applies this rule object to the system."""
+        """Apply this rule object to the system."""
         if self.is_duplicate() is False:
             # ip rule replace not supported, check for duplicates
             super().exec_cmd(self.create_line())
 
     @property
     def addline(self):
-        """Returns the add line for the ifup script."""
+        """Return the add line for the ifup script."""
         return " ".join(self.create_line()) + "\n"
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script."""
+        """Return the remove line for the ifdown script."""
         return " ".join(self.create_line()).replace(" add ", " del ") + "\n"
 
     def is_duplicate(self):

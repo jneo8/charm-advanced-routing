@@ -18,7 +18,7 @@ class TestAdvancedRoutingHelper:
 
     @classmethod
     def setUp(cls):
-        """Setup."""
+        """Make dirs for setup."""
         cls.test_dir.mkdir(parents=True)
         cls.test_ifup_path.mkdir(parents=True)
         cls.test_netplanup_path.mkdir(parents=True)

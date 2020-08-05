@@ -33,7 +33,7 @@ def apply_config():
 
 
 def action():
-    """Action flow."""
+    """Run action flow."""
     if not advanced_routing.is_advanced_routing_enabled:
         # Juju status is already set by the reactive script
         action_fail("Charm is not enabled.")
