@@ -22,7 +22,7 @@ except PolicyRoutingExists:
 
 def apply_config():
     """Set if-up/down/netplan scripts and run them."""
-    status.maintenance('Installing routes')
+    status.maintenance("Installing routes")
     try:
         advanced_routing.setup()
         advanced_routing.apply_config()

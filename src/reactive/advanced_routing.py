@@ -18,7 +18,7 @@ except PolicyRoutingExists as error:
 
 def apply_config():
     """Set if-up/down scripts and run them."""
-    status.maintenance('Installing routes')
+    status.maintenance("Installing routes")
     try:
         advanced_routing.setup()
         advanced_routing.apply_config()
@@ -28,7 +28,7 @@ def apply_config():
         return False
 
 
-@when_not('advanced-routing.installed')
+@when_not("advanced-routing.installed")
 def install_routing():
     """Install the charm."""
     if not advanced_routing.is_advanced_routing_enabled:
@@ -42,19 +42,19 @@ def install_routing():
     if not apply_config():
         return
 
-    set_flag('advanced-routing.installed')
-    status.active('Unit is ready')
+    set_flag("advanced-routing.installed")
+    status.active("Unit is ready")
 
 
-@when('advanced-routing.installed')
-@when('config.changed')
+@when("advanced-routing.installed")
+@when("config.changed")
 def reconfigure_routing():
     """Handle routing configuration change."""
     if advanced_routing.is_action_managed:
         status.blocked("Changes pending via apply-changes action")
         return
 
-    status.maintenance('Removing routes')
+    status.maintenance("Removing routes")
     advanced_routing.remove_routes()
     if not advanced_routing.is_advanced_routing_enabled:
         clear_flag("advanced-routing.installed")
@@ -63,4 +63,4 @@ def reconfigure_routing():
     if not apply_config():
         return
 
-    status.active('Unit is ready')
+    status.active("Unit is ready")

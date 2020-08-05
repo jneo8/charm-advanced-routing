@@ -7,14 +7,14 @@ import unittest.mock as mock
 import routing_validator
 
 
-class TestAdvancedRoutingHelper():
+class TestAdvancedRoutingHelper:
     """Main test class."""
 
-    test_dir = pathlib.Path('/tmp/test/charm-advanced-routing')
-    test_ifup_path = test_dir / 'symlink_test' / 'ifup'
-    test_netplanup_path = test_dir / 'symlink_test' / 'netplanup'
-    test_cleanup_path = test_dir / 'symlink_test' / 'netplandown'
-    test_script = 'test-script'
+    test_dir = pathlib.Path("/tmp/test/charm-advanced-routing")
+    test_ifup_path = test_dir / "symlink_test" / "ifup"
+    test_netplanup_path = test_dir / "symlink_test" / "netplanup"
+    test_cleanup_path = test_dir / "symlink_test" / "netplandown"
+    test_script = "test-script"
 
     @classmethod
     def setUp(cls):
@@ -40,26 +40,30 @@ class TestAdvancedRoutingHelper():
         test_obj.policy_routing_service_dir_path = self.test_dir
 
         try:
-            (test_obj.policy_routing_service_dir_path / 'charm-pre-install-policy-routing.service').unlink()
+            (
+                test_obj.policy_routing_service_dir_path
+                / "charm-pre-install-policy-routing.service"
+            ).unlink()
         except FileNotFoundError:
             pass
 
         test_obj.pre_setup()
 
-        uppath = test_obj.common_location / 'if-up'
+        uppath = test_obj.common_location / "if-up"
 
         assert uppath.exists()
 
     def test_setup(self, advanced_routing_helper):
         """Test setup."""
+
         def noop():
             pass
 
         test_obj = advanced_routing_helper
         test_obj.common_location = self.test_dir
         test_obj.routing_script_name = self.test_script
-        test_obj.common_ifup_path = self.test_dir / 'if-up' / self.test_script
-        test_obj.common_cleanup_path = self.test_dir / 'cleanup' / self.test_script
+        test_obj.common_ifup_path = self.test_dir / "if-up" / self.test_script
+        test_obj.common_cleanup_path = self.test_dir / "cleanup" / self.test_script
 
         test_obj.post_setup = noop
         routing_validator.RoutingConfigValidator.__init__ = mock.Mock(return_value=None)
@@ -72,13 +76,13 @@ class TestAdvancedRoutingHelper():
         """Test post_setup."""
         test_obj = advanced_routing_helper
 
-        with mock.patch('charmhelpers.core.host.lsb_release') as lsbrelbionic:
+        with mock.patch("charmhelpers.core.host.lsb_release") as lsbrelbionic:
             test_obj.netplan_up_dir_path = self.test_netplanup_path
             test_obj.common_cleanup_path = self.test_cleanup_path
             lsbrelbionic.return_value = "bionic"
             test_obj.remove_routes()
 
-        with mock.patch('charmhelpers.core.host.lsb_release') as lsbrelxenial:
+        with mock.patch("charmhelpers.core.host.lsb_release") as lsbrelxenial:
             test_obj.net_tools_up_dir_path = self.test_ifup_path
             test_obj.common_cleanup_path = self.test_cleanup_path
             lsbrelxenial.return_value = "xenial"
@@ -91,8 +95,8 @@ class TestAdvancedRoutingHelper():
         """Test symlink_force."""
         test_obj = advanced_routing_helper
 
-        target = self.test_dir / 'testfile'
-        link = self.test_dir / 'testlink'
+        target = self.test_dir / "testfile"
+        link = self.test_dir / "testlink"
 
         try:
             target.unlink()
@@ -102,7 +106,7 @@ class TestAdvancedRoutingHelper():
         # touch target file to link to
         try:
             with open(target, "w+") as f:
-                f.write('dont care\n')
+                f.write("dont care\n")
         except IOError:
             pass  # dont care
 

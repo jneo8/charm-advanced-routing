@@ -33,7 +33,7 @@ class RoutingConfigValidator:
 
     def __init__(self):
         """Init function."""
-        hookenv.log('Init {}'.format(self.__class__.__name__), level=hookenv.INFO)
+        hookenv.log("Init {}".format(self.__class__.__name__), level=hookenv.INFO)
 
         self.pattern = re.compile(TABLE_NAME_PATTERN)
         self.tables = set([])
@@ -49,22 +49,22 @@ class RoutingConfigValidator:
 
         try:
             json_decoded = json.loads(conf)
-            hookenv.log('Read json config from juju config', level=hookenv.INFO)
+            hookenv.log("Read json config from juju config", level=hookenv.INFO)
         except ValueError as err:
-            msg = 'JSON format invalid, conf: {}, Error: {}'.format(conf, err)
+            msg = "JSON format invalid, conf: {}, Error: {}".format(conf, err)
             self.report_error(msg)
 
         self.config = json_decoded
 
     def verify_config(self):
         """Iterates the entries in the config checking each type for sanity."""
-        hookenv.log('Verifying json config', level=hookenv.INFO)
-        type_order = ['table', 'route', 'rule']
+        hookenv.log("Verifying json config", level=hookenv.INFO)
+        type_order = ["table", "route", "rule"]
 
         dispatch_table = {
-            'table': self.verify_table,
-            'route': self.verify_route,
-            'rule': self.verify_rule,
+            "table": self.verify_table,
+            "route": self.verify_route,
+            "rule": self.verify_rule,
         }
 
         for entry_type in type_order:
@@ -84,26 +84,29 @@ class RoutingConfigValidator:
 
     def verify_table(self, conf):
         """Verify tables."""
-        hookenv.log('Verifying table {}'.format(pprint.pformat(conf)), level=hookenv.INFO)
+        hookenv.log(
+            "Verifying table {}".format(pprint.pformat(conf)), level=hookenv.INFO
+        )
 
-        is_valid_name = self.pattern.match(conf['table'])
+        is_valid_name = self.pattern.match(conf["table"])
         if is_valid_name and conf["table"] not in self.tables:
-            self.tables.add(conf['table'])
+            self.tables.add(conf["table"])
             RoutingEntryType.add_entry(RoutingEntryTable(conf))
             return
 
         if not is_valid_name:
-            msg = 'Bad network config: table name {} must match {}.'.format(
-                conf['table'],
-                TABLE_NAME_PATTERN,
+            msg = "Bad network config: table name {} must match {}.".format(
+                conf["table"], TABLE_NAME_PATTERN,
             )
         else:
-            msg = 'Bad network config: duplicate table name "{}"'.format(conf['table'])
+            msg = 'Bad network config: duplicate table name "{}"'.format(conf["table"])
         self.report_error(msg)
 
     def verify_route(self, conf):
         """Verify routes."""
-        hookenv.log('Verifying route {}'.format(pprint.pformat(conf)), level=hookenv.INFO)
+        hookenv.log(
+            "Verifying route {}".format(pprint.pformat(conf)), level=hookenv.INFO
+        )
 
         # Verify items in configuration
         self.verify_route_gateway(conf)
@@ -123,12 +126,12 @@ class RoutingConfigValidator:
         if not conf.get("default_route"):
             return
         try:
-            ipaddress.ip_address(conf['gateway'])
+            ipaddress.ip_address(conf["gateway"])
             return
         except KeyError:
             msg = "Bad network config: routing entries need the 'gateway' def"
         except ValueError as error:
-            msg = 'Bad gateway IP: {} - {}'.format(conf['gateway'], error)
+            msg = "Bad gateway IP: {} - {}".format(conf["gateway"], error)
         self.report_error(msg)
 
     def verify_route_network(self, conf):
@@ -137,14 +140,14 @@ class RoutingConfigValidator:
         "net" key is a required configuration parameter.
         """
         try:
-            ipaddress.ip_network(conf['net'])
+            ipaddress.ip_network(conf["net"])
             return
         except KeyError:
             if "default_route" in conf:
                 return
             msg = "Bad network config: routing entries need the 'net' def"
         except ValueError as error:
-            msg = 'Bad network config: {} - {}'.format(conf['net'], error)
+            msg = "Bad network config: {} - {}".format(conf["net"], error)
         self.report_error(msg)
 
     def verify_route_table(self, conf):
@@ -158,13 +161,13 @@ class RoutingConfigValidator:
                 return True
 
             if not is_valid_name:
-                msg = 'Bad network config: table name {} must match {} in {}'.format(
-                    conf['table'],
-                    TABLE_NAME_PATTERN,
-                    conf,
+                msg = "Bad network config: table name {} must match {} in {}".format(
+                    conf["table"], TABLE_NAME_PATTERN, conf,
                 )
             else:
-                msg = 'Bad network config: table {} reference not defined'.format(conf['table'])
+                msg = "Bad network config: table {} reference not defined".format(
+                    conf["table"]
+                )
             self.report_error(msg)
         except KeyError:
             # key is optional
@@ -183,11 +186,17 @@ class RoutingConfigValidator:
                 return
 
             if not is_valid_bool_value:
-                msg = 'Bad network config: default_route should be bool in {}'.format(conf)
+                msg = "Bad network config: default_route should be bool in {}".format(
+                    conf
+                )
             elif not table_exists:
-                msg = "Bad network config: Key 'table' missing in default route {}".format(conf)
+                msg = "Bad network config: Key 'table' missing in default route {}".format(
+                    conf
+                )
             else:
-                msg = "Bad network config: Key 'table' cannot be 'main' in default route {}".format(conf)
+                msg = "Bad network config: Key 'table' cannot be 'main' in default route {}".format(
+                    conf
+                )
             self.report_error(msg)
         except KeyError:
             # key is mutually exclusive with "net"
@@ -201,7 +210,7 @@ class RoutingConfigValidator:
         """
         try:
             if conf["device"] not in netifaces.interfaces():
-                msg = 'Device {} does not exist'.format(conf['device'])
+                msg = "Device {} does not exist".format(conf["device"])
                 self.report_error(msg)
         except KeyError:
             if "gateway" in conf:
@@ -219,12 +228,14 @@ class RoutingConfigValidator:
             # key is optional
             pass
         except ValueError:
-            msg = 'Bad network config: metric expected to be integer'
+            msg = "Bad network config: metric expected to be integer"
             self.report_error(msg)
 
     def verify_rule(self, conf):
         """Verify rules."""
-        hookenv.log('Verifying rule {}'.format(pprint.pformat(conf)), level=hookenv.INFO)
+        hookenv.log(
+            "Verifying rule {}".format(pprint.pformat(conf)), level=hookenv.INFO
+        )
 
         # Verify items in configuration
         self.verify_rule_from_net(conf)
@@ -240,13 +251,13 @@ class RoutingConfigValidator:
         "from-net" key is a required configuration parameter.
         """
         try:
-            fro = conf['from-net']
-            if fro == 'all' or ipaddress.ip_network(fro):
+            fro = conf["from-net"]
+            if fro == "all" or ipaddress.ip_network(fro):
                 return
         except KeyError:
             msg = "Bad network config: rule entries need the 'from-net' def"
         except ValueError as error:
-            msg = 'Bad network config: {} - {}'.format(conf['from-net'], error)
+            msg = "Bad network config: {} - {}".format(conf["from-net"], error)
         self.report_error(msg)
 
     def verify_rule_to_net(self, conf):
@@ -255,14 +266,14 @@ class RoutingConfigValidator:
         "to-net" key is a optional configuration parameter.
         """
         try:
-            to = conf['to-net']
-            if to == 'all' or ipaddress.ip_network(to):
+            to = conf["to-net"]
+            if to == "all" or ipaddress.ip_network(to):
                 return
         except KeyError:
             # key is optional
             pass
         except ValueError as error:
-            msg = 'Bad network config: {} - {}'.format(conf['to-net'], error)
+            msg = "Bad network config: {} - {}".format(conf["to-net"], error)
             self.report_error(msg)
 
     def verify_rule_table(self, conf):
@@ -280,12 +291,14 @@ class RoutingConfigValidator:
         "priority" key is an optional configuration parameter.
         """
         try:
-            int(conf['priority'])
+            int(conf["priority"])
         except KeyError:
             # key is optional
             pass
         except ValueError:
-            msg = 'Bad network config: priority expected to be integer at {}'.format(conf)
+            msg = "Bad network config: priority expected to be integer at {}".format(
+                conf
+            )
             self.report_error(msg)
 
     def report_error(self, msg):
