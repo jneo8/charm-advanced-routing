@@ -13,7 +13,7 @@ class TestActions():
 
     def test_action_apply_changes_apply_config(self, advanced_routing_helper):
         """Test action apply changes."""
-        import apply_changes
+        import actions.apply_changes
 
         def noop():
             pass
@@ -27,4 +27,4 @@ class TestActions():
         routing_validator.RoutingConfigValidator.__init__ = mock.Mock(return_value=None)
         test_obj.setup()
 
-        assert apply_changes.apply_config()
+        assert actions.apply_changes.apply_config()
