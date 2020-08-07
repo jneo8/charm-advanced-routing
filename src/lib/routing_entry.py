@@ -22,20 +22,33 @@ class RoutingEntryType(metaclass=ABCMeta):
     config = None  # config entry
 
     def __init__(self):
-        """Constructor."""
-        hookenv.log('Init {}'.format(self.__class__.__name__), level=hookenv.INFO)
+        """Init this class."""
+        hookenv.log("Init {}".format(self.__class__.__name__), level=hookenv.INFO)
 
     def exec_cmd(self, cmd, pipe=False):
-        """Runs a subprocess and returns True or False on success."""
+        """Run a subprocess and return True or False on success."""
         try:
             if pipe:
-                hookenv.log('Subprocess check shell: {} {}'.format(self.__class__.__name__, cmd), level=hookenv.INFO)
-                command = ' '.join(cmd)
-                ps = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                hookenv.log(
+                    "Subprocess check shell: {} {}".format(
+                        self.__class__.__name__, cmd
+                    ),
+                    level=hookenv.INFO,
+                )
+                command = " ".join(cmd)
+                ps = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
                 ps.communicate()
                 return ps.returncode == 0
             else:
-                hookenv.log('Subprocess check: {} {}'.format(self.__class__.__name__, cmd), level=hookenv.INFO)
+                hookenv.log(
+                    "Subprocess check: {} {}".format(self.__class__.__name__, cmd),
+                    level=hookenv.INFO,
+                )
                 subprocess.check_call(cmd)
                 return True
         except subprocess.CalledProcessError as error:
@@ -58,7 +71,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractmethod
     def apply(self):
-        """Applies a rule object to the system.
+        """Apply a rule object to the system.
 
         Not implemented, should override in strategy.
         """
@@ -66,7 +79,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractmethod
     def create_line(self):
-        """Creates and returns the command line for this rule object.
+        """Create and return the command line for this rule object.
 
         Not implemented, should override in strategy.
         """
@@ -74,7 +87,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractproperty
     def addline(self):
-        """Returns the add line for the ifup script.
+        """Return the add line for the ifup script.
 
         Not implemented, should override in strategy.
         """
@@ -82,7 +95,7 @@ class RoutingEntryType(metaclass=ABCMeta):
 
     @abstractproperty
     def removeline(self):
-        """Returns the remove line for the ifdown script.
+        """Return the remove line for the ifdown script.
 
         Not implemented, should override in strategy.
         """
@@ -93,15 +106,15 @@ class RoutingEntryTable(RoutingEntryType):
     """RoutingEntryType used for routing tables."""
 
     default_table_file = "/etc/iproute2/rt_tables"
-    table_name_file = '/etc/iproute2/rt_tables.d/juju-managed.conf'
+    table_name_file = "/etc/iproute2/rt_tables.d/juju-managed.conf"
     table_index_offset = 100  # static
     tables = set([])
     tables_all = set([])
     builtin_tables = {"main", "local", "default"}
 
     def __init__(self, config):
-        """Adds unique tables to the tables list."""
-        hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
+        """Add unique tables to the tables list."""
+        hookenv.log("Created {}".format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
         RoutingEntryTable.tables_all.update(self.builtin_tables)
@@ -120,34 +133,32 @@ class RoutingEntryTable(RoutingEntryType):
         pass
 
     def apply(self):
-        """Opens iproute tables and adds the known list of tables into this file."""
-        with open(RoutingEntryTable.table_name_file, 'w') as rt_table_file:
+        """Open iproute tables and add the known list of tables into this file."""
+        with open(RoutingEntryTable.table_name_file, "w") as rt_table_file:
             num = RoutingEntryTable.table_index_offset
             for num, tbl in enumerate(RoutingEntryTable.tables):
                 rt_table_file.write(
-                    "{} {}\n".format(
-                        num + RoutingEntryTable.table_index_offset,
-                        tbl,
-                    )
+                    "{} {}\n".format(num + RoutingEntryTable.table_index_offset, tbl)
                 )
 
     @property
     def addline(self):
-        """Returns the add line for the ifup script."""
-        return "# Table: name {}\n".format(self.config['table'])
+        """Return the add line for the ifup script."""
+        return "# Table: name {}\n".format(self.config["table"])
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script.
+        """Return the remove line for the ifdown script.
 
         Will skip built-in tables (main, local or default table)
         """
-        table = self.config['table']
+        table = self.config["table"]
         if table in self.builtin_tables:
             hookenv.log("Skip removeline for builtin table {table}".format(table=table))
             return "# Skip removing builtin table {table}\n".format(table=table)
-        return ("ip route flush table {table}\n"
-                "ip rule del table {table}\n").format(table=table)
+        return ("ip route flush table {table}\nip rule del table {table}\n").format(
+            table=table
+        )
 
 
 class RoutingEntryRoute(RoutingEntryType):
@@ -155,12 +166,12 @@ class RoutingEntryRoute(RoutingEntryType):
 
     def __init__(self, config):
         """Object init function."""
-        hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
+        hookenv.log("Created {}".format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
 
     def create_line(self):
-        """Creates and returns the command line for this route object.
+        """Create and return the command line for this route object.
 
         "default_route" and "net" are mutually exclusive. One of them is required
         "default_route" requires "table"
@@ -169,63 +180,54 @@ class RoutingEntryRoute(RoutingEntryType):
         Optional keywords: device, table and metric
 
         """
-        opts = collections.OrderedDict({
-            "device": "dev",
-            "table": "table",
-            "metric": "metric",
-        })
+        opts = collections.OrderedDict(
+            {"device": "dev", "table": "table", "metric": "metric"}
+        )
         cmd = ["ip", "route", "replace"]
 
         gateway = self.config.get("gateway")
         # default route in table
-        if 'default_route' in self.config.keys():
-            cmd.extend([
-                "default",
-                "via",
-                gateway,  # Validated to be non-nil in validator
-                "table",
-                self.config["table"],
-            ])
+        if "default_route" in self.config.keys():
+            cmd.extend(
+                [
+                    "default",
+                    "via",
+                    gateway,  # Validated to be non-nil in validator
+                    "table",
+                    self.config["table"],
+                ]
+            )
             # already enforced
             del opts["table"]
         else:
             if gateway:
                 # route in any given table or none
-                cmd.extend([
-                    self.config['net'],
-                    "via",
-                    self.config["gateway"],
-                ])
+                cmd.extend([self.config["net"], "via", self.config["gateway"]])
             else:
                 # directly connected route
-                cmd.extend([
-                    self.config['net']
-                ])
+                cmd.extend([self.config["net"]])
 
         # The "default_route" flow forces "table", so it is later removed
         for opt, keyword in opts.items():
             try:
-                cmd.extend([
-                    keyword,
-                    str(self.config[opt]),
-                ])
+                cmd.extend([keyword, str(self.config[opt])])
             except KeyError:
                 pass
         return cmd
 
     def apply(self):
-        """Applies this rule object to the system."""
+        """Apply this rule object to the system."""
         super().exec_cmd(self.create_line())
 
     @property
     def addline(self):
-        """Returns the add line for the ifup script."""
-        return ' '.join(self.create_line()) + "\n"
+        """Return the add line for the ifup script."""
+        return " ".join(self.create_line()) + "\n"
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script."""
-        return ' '.join(self.create_line()).replace(" replace ", " del ") + "\n"
+        """Return the remove line for the ifdown script."""
+        return " ".join(self.create_line()).replace(" replace ", " del ") + "\n"
 
 
 class RoutingEntryRule(RoutingEntryType):
@@ -233,12 +235,12 @@ class RoutingEntryRule(RoutingEntryType):
 
     def __init__(self, config):
         """Object init function."""
-        hookenv.log('Created {}'.format(self.__class__.__name__), level=hookenv.INFO)
+        hookenv.log("Created {}".format(self.__class__.__name__), level=hookenv.INFO)
         super().__init__()
         self.config = config
 
     def create_line(self):
-        """Creates and returns the command line for this rule object.
+        """Create and return the command line for this rule object.
 
         Variations:
         # any dst, table main, default prio
@@ -258,49 +260,46 @@ class RoutingEntryRule(RoutingEntryType):
         # any dst, table main
         ip rule add from X.X.X.X/XX priority NNN
         """
-        cmd = ["ip", "rule", "add", "from", self.config['from-net']]
-        opts = collections.OrderedDict({
-            "to-net": "to",
-            "table": "table",
-            "priority": "priority",
-        })
+        cmd = ["ip", "rule", "add", "from", self.config["from-net"]]
+        opts = collections.OrderedDict(
+            {"to-net": "to", "table": "table", "priority": "priority"}
+        )
         for opt, keyword in opts.items():
             try:
-                cmd.extend([
-                    keyword,
-                    str(self.config[opt]),
-                ])
+                cmd.extend([keyword, str(self.config[opt])])
             except KeyError:
                 pass
         return cmd
 
     def apply(self):
-        """Applies this rule object to the system."""
+        """Apply this rule object to the system."""
         if self.is_duplicate() is False:
             # ip rule replace not supported, check for duplicates
             super().exec_cmd(self.create_line())
 
     @property
     def addline(self):
-        """Returns the add line for the ifup script."""
-        return ' '.join(self.create_line()) + "\n"
+        """Return the add line for the ifup script."""
+        return " ".join(self.create_line()) + "\n"
 
     @property
     def removeline(self):
-        """Returns the remove line for the ifdown script."""
-        return ' '.join(self.create_line()).replace(" add ", " del ") + "\n"
+        """Return the remove line for the ifdown script."""
+        return " ".join(self.create_line()).replace(" add ", " del ") + "\n"
 
     def is_duplicate(self):
         """Ip rule add does not prevent duplicates in older kernel versions."""
         # https://patchwork.ozlabs.org/patch/624553/
-        matchparams = ["from", self.config['from-net']]
+        matchparams = ["from", self.config["from-net"]]
         to = self.config.get("to-net")
         if to and to != "all":  # ip rule omits to=all as it's implied
             matchparams.extend(("to", to))
         matchparams.extend(("lookup", self.config.get("table", "main")))
         matchline = " ".join(matchparams)
         prio = str(self.config.get("priority", ""))
-        existing_rules = subprocess.check_output(["ip", "rule"]).decode("utf8").splitlines()
+        existing_rules = (
+            subprocess.check_output(["ip", "rule"]).decode("utf8").splitlines()
+        )
         for rule in existing_rules:
             rule = rule.strip()
             if rule.startswith(prio) and rule.endswith(matchline):

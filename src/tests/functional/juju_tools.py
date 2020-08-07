@@ -37,14 +37,17 @@ class JujuTools:
         :param target: Unit object or unit name string
         """
         python3 = "python3 -c '{}'"
-        python_cmd = ('import pickle;'
-                      'import base64;'
-                      '{}'
-                      'print(base64.b64encode(pickle.dumps({})), end="")'
-                      .format(imports, remote_cmd))
+        python_cmd = (
+            "import pickle;"
+            "import base64;"
+            "{}"
+            'print(base64.b64encode(pickle.dumps({})), end="")'.format(
+                imports, remote_cmd
+            )
+        )
         cmd = python3.format(python_cmd)
         results = await self.run_command(cmd, target)
-        return pickle.loads(base64.b64decode(bytes(results['Stdout'][2:-1], 'utf8')))
+        return pickle.loads(base64.b64decode(bytes(results["Stdout"][2:-1], "utf8")))
 
     async def file_stat(self, path, target):
         """Run stat on a file.
@@ -52,9 +55,8 @@ class JujuTools:
         :param path: File path
         :param target: Unit object or unit name string
         """
-        imports = 'import os;'
-        python_cmd = ('os.stat("{}")'
-                      .format(path))
+        imports = "import os;"
+        python_cmd = 'os.stat("{}")'.format(path)
         print("Calling remote cmd: " + python_cmd)
         return await self.remote_object(imports, python_cmd, target)
 
@@ -64,6 +66,6 @@ class JujuTools:
         :param path: File path
         :param target: Unit object or unit name string
         """
-        cmd = 'cat {}'.format(path)
+        cmd = "cat {}".format(path)
         result = await self.run_command(cmd, target)
-        return result['Stdout']
+        return result["Stdout"]

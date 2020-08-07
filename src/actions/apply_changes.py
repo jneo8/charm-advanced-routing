@@ -22,7 +22,7 @@ except PolicyRoutingExists:
 
 def apply_config():
     """Set if-up/down/netplan scripts and run them."""
-    status.maintenance('Installing routes')
+    status.maintenance("Installing routes")
     try:
         advanced_routing.setup()
         advanced_routing.apply_config()
@@ -33,7 +33,7 @@ def apply_config():
 
 
 def action():
-    """Action flow."""
+    """Run action flow."""
     if not advanced_routing.is_advanced_routing_enabled:
         # Juju status is already set by the reactive script
         action_fail("Charm is not enabled.")
