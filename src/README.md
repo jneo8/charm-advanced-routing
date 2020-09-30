@@ -152,12 +152,12 @@ advanced-routing:
           "type": "route",
           "default_route": true,
           "gateway": "10.10.51.1",
-          "table": "SF1",
+          "table": "SF1"
       }, {
           "type": "rule",
           "from-net": "10.10.51.0/24",
           "to-net": "10.10.51.0/24",
-          "priority": 100,     
+          "priority": 100
       }, {
           "type": "rule",
           "from-net": "10.10.51.0/24",
