@@ -38,7 +38,8 @@ async def deploy_app(request, model):
         num_units=0,
     )
     await model.add_relation(
-        "ubuntu-{}".format(release), "advanced-routing-{}".format(release),
+        "ubuntu-{}".format(release),
+        "advanced-routing-{}".format(release),
     )
 
     yield advanced_routing
