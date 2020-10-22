@@ -18,8 +18,8 @@ from routing_entry import (
     RoutingEntryType,
 )
 
-TABLE_NAME_PATTERN = "[a-zA-Z0-9]+[a-zA-Z0-9-]*"
-TABLE_NAME_PATTERN_RE = "^{}$".format(TABLE_NAME_PATTERN)
+TABLE_NAME_PATTERN = r"[a-zA-Z0-9]+[a-zA-Z0-9-]*"
+TABLE_NAME_PATTERN_RE = r"^{}$".format(TABLE_NAME_PATTERN)
 
 
 class RoutingConfigValidatorError(Exception):
@@ -240,12 +240,46 @@ class RoutingConfigValidator:
         )
 
         # Verify items in configuration
+        self.verify_rule_mark(conf)
+        self.verify_rule_iif(conf)
         self.verify_rule_from_net(conf)
         self.verify_rule_to_net(conf)
         self.verify_rule_table(conf)
         self.verify_rule_prirority(conf)
 
         RoutingEntryType.add_entry(RoutingEntryRule(conf))
+
+    def verify_rule_mark(self, conf):
+        """
+        Verify fwmark config.
+
+        "fwmark" key isn't required.
+        if fwmark is correct and from-net is unset -- set from-net=all
+        """
+        fwmark = conf.get("fwmark")
+        fwmark_hex = RoutingEntryRule.fwmark_hex(fwmark)
+        from_net = conf.get("from-net")
+        if fwmark and not fwmark_hex:
+            msg = "fwmark {} is in the wrong format".format(fwmark)
+            self.report_error(msg)
+
+        if fwmark_hex:
+            # now that its valid, update the config with hex version
+            conf["fwmark"] = fwmark_hex
+
+        if fwmark_hex and not from_net:
+            conf["from-net"] = "all"
+
+    def verify_rule_iif(self, conf):
+        """
+        Verify rule input interface.
+
+        "iif" key isn't required, but verify the network device exists
+        """
+        iif = conf.get("iif")
+        if iif and iif not in netifaces.interfaces():
+            msg = "Device {} does not exist".format(iif)
+            self.report_error(msg)
 
     def verify_rule_from_net(self, conf):
         """Verify rule source network.

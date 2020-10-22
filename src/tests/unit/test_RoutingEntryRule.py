@@ -33,6 +33,24 @@ import routing_entry
             True,
             id="From-ToAll-Table-Prio-Found=True",
         ),
+        pytest.param(
+            {
+                "from-net": "all",
+                "fwmark": "0x10/0xff",
+                "iif": "lo",
+                "to-net": "10.0.0.0/24",
+                "table": "SF1",
+                "priority": 100,
+            },
+            (
+                b"0:\tfrom all lookup local\n"
+                b"100:\tfrom all to 10.0.0.0/24 fwmark 0x10/0xff iif lo lookup SF1\n"
+                b"32766:\tfrom all lookup main\n"
+                b"32767:\tfrom all lookup default\n"
+            ),
+            True,
+            id="FromAll-ToNet-Fwmark-Iif-Table-Prio-Found=True",
+        ),
     ],
 )
 def test_routing_entry_rule_is_duplicate(

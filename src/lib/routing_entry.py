@@ -9,8 +9,10 @@ concrete implementations, that model a routing table
      RoutingEntryTable  RoutingEntryRoute  RoutingEntryRule
 """
 import collections
+import re
 import subprocess
 from abc import ABCMeta, abstractmethod, abstractproperty
+
 
 from charmhelpers.core import hookenv
 
@@ -233,6 +235,27 @@ class RoutingEntryRoute(RoutingEntryType):
 class RoutingEntryRule(RoutingEntryType):
     """RoutingEntryType used for rules."""
 
+    MARK_PATTERN_TXT = (
+        r"(\d{1,13}|0[x|X][0-9a-fA-F]{1,8})(?:\/(0[x|X][0-9a-fA-F]{1,8}))?"
+    )
+    MARK_PATTERN = re.compile("^{}$".format(MARK_PATTERN_TXT))
+
+    @staticmethod
+    def fwmark_hex(fwmark):
+        """Convert user fwmark to match the output from ip rules list."""
+        if not fwmark:
+            return None
+        match = RoutingEntryRule.MARK_PATTERN.search(fwmark)
+        if not match:
+            return None
+        hex_vals = match.groups()
+        as_ints = [
+            int(val, 16 if val.lower().startswith("0x") else 10)
+            for val in hex_vals
+            if val
+        ]
+        return "/".join(map(hex, as_ints))
+
     def __init__(self, config):
         """Object init function."""
         hookenv.log("Created {}".format(self.__class__.__name__), level=hookenv.INFO)
@@ -259,12 +282,18 @@ class RoutingEntryRule(RoutingEntryType):
         ip rule add from X.X.X.X/XX table mytable priority NNN
         # any dst, table main
         ip rule add from X.X.X.X/XX priority NNN
+        # any src, fwmark 0x1/0xF, iif bond0, table mytable
+        ip rule add from any fwmark 1/0xF iif bond0 table mytable priority NNN
         """
         cmd = ["ip", "rule", "add", "from", self.config["from-net"]]
-        opts = collections.OrderedDict(
-            {"to-net": "to", "table": "table", "priority": "priority"}
-        )
-        for opt, keyword in opts.items():
+        opts = [
+            ("fwmark", "fwmark"),
+            ("iif", "iif"),
+            ("to-net", "to"),
+            ("table", "table"),
+            ("priority", "priority"),
+        ]
+        for opt, keyword in opts:
             try:
                 cmd.extend([keyword, str(self.config[opt])])
             except KeyError:
@@ -291,9 +320,19 @@ class RoutingEntryRule(RoutingEntryType):
         """Ip rule add does not prevent duplicates in older kernel versions."""
         # https://patchwork.ozlabs.org/patch/624553/
         matchparams = ["from", self.config["from-net"]]
+
         to = self.config.get("to-net")
         if to and to != "all":  # ip rule omits to=all as it's implied
             matchparams.extend(("to", to))
+
+        fwmark = self.config.get("fwmark")
+        if fwmark:
+            matchparams.extend(("fwmark", fwmark))
+
+        iif = self.config.get("iif")
+        if iif:
+            matchparams.extend(("iif", iif))
+
         matchparams.extend(("lookup", self.config.get("table", "main")))
         matchline = " ".join(matchparams)
         prio = str(self.config.get("priority", ""))
