@@ -236,15 +236,18 @@ class RoutingEntryRule(RoutingEntryType):
     """RoutingEntryType used for rules."""
 
     MARK_PATTERN_TXT = (
-        r"(\d{1,13}|0[x|X][0-9a-fA-F]{1,8})(?:\/(0[x|X][0-9a-fA-F]{1,8}))?"
+        # 13 digit int | 8 digit hex value [optional 8 digit hex mask]
+        r"^(\d{1,13}|0x[0-9a-f]{1,8})(?:\/(0x[0-9a-f]{1,8}))?$"
     )
-    MARK_PATTERN = re.compile("^{}$".format(MARK_PATTERN_TXT))
+    MARK_PATTERN = re.compile(MARK_PATTERN_TXT, re.IGNORECASE)
 
     @staticmethod
-    def fwmark_hex(fwmark):
-        """Convert user fwmark to match the output from ip rules list."""
-        if not fwmark:
-            return None
+    def fwmark_user(fwmark):
+        """
+        Convert user fwmark to match the output from ip rules list.
+        @param str fwmark: marking from the user config
+        @returns str in hex/hex format
+        """
         match = RoutingEntryRule.MARK_PATTERN.search(fwmark)
         if not match:
             return None

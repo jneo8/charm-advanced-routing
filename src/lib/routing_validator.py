@@ -257,13 +257,15 @@ class RoutingConfigValidator:
         if fwmark is correct and from-net is unset -- set from-net=all
         """
         fwmark = conf.get("fwmark")
-        fwmark_hex = RoutingEntryRule.fwmark_hex(fwmark)
+        if not fwmark:
+            return None
+
+        fwmark_hex = RoutingEntryRule.fwmark_user(fwmark)
         from_net = conf.get("from-net")
-        if fwmark and not fwmark_hex:
+        if not fwmark_hex:
             msg = "fwmark {} is in the wrong format".format(fwmark)
             self.report_error(msg)
-
-        if fwmark_hex:
+        else:
             # now that its valid, update the config with hex version
             conf["fwmark"] = fwmark_hex
 
