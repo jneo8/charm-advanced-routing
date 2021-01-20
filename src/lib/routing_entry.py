@@ -243,8 +243,8 @@ class RoutingEntryRule(RoutingEntryType):
 
     @staticmethod
     def fwmark_user(fwmark):
-        """
-        Convert user fwmark to match the output from ip rules list.
+        """Convert user fwmark to match the output from ip rules list.
+
         @param str fwmark: marking from the user config
         @returns str in hex/hex format
         """
