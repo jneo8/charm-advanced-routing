@@ -7,6 +7,7 @@ import traceback
 from advanced_routing_helper import AdvancedRoutingHelper, PolicyRoutingExists
 
 from charmhelpers.core.hookenv import action_fail, action_set
+from charmhelpers.core import unitdata
 
 from charms.layer import status
 from charms.reactive import is_flag_set, set_flag
@@ -56,6 +57,8 @@ def action():
 
     status.active("Unit is ready")
     action_set({"message": "Routing changes applied."})
+    # Flags aren't auto-committed outside of hook contexts, so commit them.
+    unitdata.kv().flush()
 
 
 if __name__ == "__main__":
