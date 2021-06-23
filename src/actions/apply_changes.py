@@ -2,6 +2,7 @@
 """apply-changes action."""
 
 import sys
+import traceback
 
 from advanced_routing_helper import AdvancedRoutingHelper, PolicyRoutingExists
 
@@ -28,6 +29,7 @@ def apply_config():
         advanced_routing.apply_config()
         return True
     except RoutingConfigValidatorError:
+        print(traceback.format_exc(), file=sys.stderr)
         status.blocked("Route config validation failed.")
         return False
 
