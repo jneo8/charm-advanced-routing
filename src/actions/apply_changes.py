@@ -2,9 +2,11 @@
 """apply-changes action."""
 
 import sys
+import traceback
 
 from advanced_routing_helper import AdvancedRoutingHelper, PolicyRoutingExists
 
+from charmhelpers.core import unitdata
 from charmhelpers.core.hookenv import action_fail, action_set
 
 from charms.layer import status
@@ -28,6 +30,7 @@ def apply_config():
         advanced_routing.apply_config()
         return True
     except RoutingConfigValidatorError:
+        print(traceback.format_exc(), file=sys.stderr)
         status.blocked("Route config validation failed.")
         return False
 
@@ -54,6 +57,8 @@ def action():
 
     status.active("Unit is ready")
     action_set({"message": "Routing changes applied."})
+    # Flags aren't auto-committed outside of hook contexts, so commit them.
+    unitdata.kv().flush()
 
 
 if __name__ == "__main__":
