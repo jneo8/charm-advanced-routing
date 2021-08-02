@@ -23,7 +23,7 @@ juju deploy cs:advanced-routing
 juju add-relation ubuntu advanced-routing
 ```
 
-# Configuration                                                                 
+# Configuration
 The user can configure the following parameters:
  * `enable-advanced-routing`: Enable routing. This requires for the charm to have routing information configured in JSON format: ```juju config advanced-routing --file path/to/your/config```
 
@@ -56,8 +56,8 @@ settings:
           "table": "SF1"
       }, {
           "type": "route",
-          "default_route": true,  
-          "gateway": "10.191.86.2",      
+          "default_route": true,
+          "gateway": "10.191.86.2",
           "table": "SF1",
           "metric": 101,
           "device": "eth0"
@@ -83,7 +83,7 @@ The `example_config.yaml` file is also provided with the codebase.
 
 ### Initial deployment:
 
-The following steps assume that an ubuntu unit with a subordinate policy-routing charm 
+The following steps assume that an ubuntu unit with a subordinate policy-routing charm
 with the following config has been deployed:
 
 ```
@@ -116,13 +116,13 @@ settings:
 juju status looks like:
 
 ```
-$ juju status 
+$ juju status
 Model        Controller  Cloud/Region         Version  SLA          Timestamp
 model1  lxd         localhost/localhost  2.7.2    unsupported  11:52:19Z
 
-App                       Version     Status   Scale  Charm                     Store       Rev  OS      Notes  
-policy-routing                        waiting      0  policy-routing            jujucharms    3  ubuntu  
-ubuntu                    18.04       active       1  ubuntu                    jujucharms   15  ubuntu  
+App                       Version     Status   Scale  Charm                     Store       Rev  OS      Notes
+policy-routing                        waiting      0  policy-routing            jujucharms    3  ubuntu
+ubuntu                    18.04       active       1  ubuntu                    jujucharms   15  ubuntu
 
 
 Unit                   Workload  Agent      Machine  Public address  Ports               Message
@@ -131,17 +131,17 @@ ubuntu/0*              active    idle       127      10.0.8.155                 
 
 ```
 
-### Deploy advanced-routing charm :
+### Deploy advanced-routing charm:
 
-- ``` juju deploy cs:advanced-routing ```
-- ``` juju add-relation ubuntu advanced-routing ```
+* `juju deploy cs:advanced-routing`
+* `juju add-relation ubuntu advanced-routing`
 
 Advanced-routing is in status blocked with message: "Please disable charm-policy-routing"
 
 Apply the following config:
 
 ```
-$ cat ./advanced_routing_config 
+$ cat ./advanced_routing_config
 advanced-routing:
   enable-advanced-routing: true
   advanced-routing-config: |
@@ -186,23 +186,28 @@ Using the action apply-changes, add the routes using the advance-routing charm
 juju run-action advanced-routing/0 apply-changes --wait
 ```
 
-# Testing                                                                       
+# Testing
+
 To run lint tests:
+
 ```bash
 tox -e lint
-
 ```
+
 To run unit tests:
+
 ```bash
 tox -e unit
 ```
+
 Functional tests have been developed using python-libjuju, deploying a simple ubuntu charm and adding the charm as a subordinate.
 
 To run tests using python-libjuju:
+
 ```bash
 tox -e functional
 ```
 
 # Contact Information
 
- * LMA Charmers <llama-charmers@lists.launchpad.net>
+* LMA Charmers <llama-charmers@lists.launchpad.net>
