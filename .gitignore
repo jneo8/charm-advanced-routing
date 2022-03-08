@@ -38,4 +38,6 @@ dist/
 *.snap
 
 # Builds
+build/
 .build/
+*.charm
