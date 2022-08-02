@@ -315,7 +315,7 @@ Functional tests have been developed using python-libjuju, deploying a simple ub
 To run tests using python-libjuju:
 
 ```bash
-tox -e functional
+tox -e func
 ```
 
 # Contact Information

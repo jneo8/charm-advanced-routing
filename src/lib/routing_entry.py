@@ -179,11 +179,17 @@ class RoutingEntryRoute(RoutingEntryType):
         "default_route" requires "table"
         "gateway" is mandatory
 
-        Optional keywords: device, table and metric
+        Optional keywords: device, table, metric, mtu, mtu_lock
 
         """
         opts = collections.OrderedDict(
-            {"device": "dev", "table": "table", "metric": "metric"}
+            {
+                "device": "dev",
+                "table": "table",
+                "metric": "metric",
+                "mtu": "mtu",
+                "mtu_lock": "mtu lock",
+            }
         )
         cmd = ["ip", "route", "replace"]
 
@@ -212,6 +218,12 @@ class RoutingEntryRoute(RoutingEntryType):
         # The "default_route" flow forces "table", so it is later removed
         for opt, keyword in opts.items():
             try:
+                if keyword == "mtu lock":
+                    try:
+                        cmd.extend(keyword.split() + [str(self.config[opt])])
+                        continue
+                    except KeyError:
+                        continue
                 cmd.extend([keyword, str(self.config[opt])])
             except KeyError:
                 pass
