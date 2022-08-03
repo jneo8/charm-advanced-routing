@@ -218,13 +218,7 @@ class RoutingEntryRoute(RoutingEntryType):
         # The "default_route" flow forces "table", so it is later removed
         for opt, keyword in opts.items():
             try:
-                if keyword == "mtu lock":
-                    try:
-                        cmd.extend(keyword.split() + [str(self.config[opt])])
-                        continue
-                    except KeyError:
-                        continue
-                cmd.extend([keyword, str(self.config[opt])])
+                cmd.extend(keyword.split() + [str(self.config[opt])])
             except KeyError:
                 pass
         return cmd
