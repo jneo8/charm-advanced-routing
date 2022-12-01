@@ -9,7 +9,7 @@ import pytest
 
 import pytest_asyncio
 
-pytestmark=pytest.mark.asyncio
+pytestmark = pytest.mark.asyncio
 SERIES = [
     "jammy",
     "focal",
