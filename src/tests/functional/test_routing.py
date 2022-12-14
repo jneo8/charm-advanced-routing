@@ -7,11 +7,12 @@ import cfg_opts
 
 import pytest
 
+import pytest_asyncio
+
 pytestmark = pytest.mark.asyncio
 SERIES = [
     "jammy",
     "focal",
-    "bionic",
 ]
 CHARM_BUILD_DIR = os.getenv("CHARM_BUILD_DIR", "/tmp/charm-builds")
 BUILT_CHARM = os.path.join(CHARM_BUILD_DIR, "advanced-routing")
@@ -21,7 +22,7 @@ BUILT_CHARM = os.path.join(CHARM_BUILD_DIR, "advanced-routing")
 ############
 
 
-@pytest.fixture(scope="module", params=SERIES)
+@pytest_asyncio.fixture(scope="module", params=SERIES)
 async def deploy_app(request, model):
     """Deploy the advanced-routing charm as a subordinate of ubuntu."""
     release = request.param
@@ -46,7 +47,7 @@ async def deploy_app(request, model):
     yield advanced_routing
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def unit(deploy_app):
     """Return the advanced-routing unit we've deployed."""
     return deploy_app.units.pop()

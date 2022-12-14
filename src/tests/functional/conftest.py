@@ -18,12 +18,10 @@ import juju
 from juju.controller import Controller
 from juju.errors import JujuError
 
-from juju_tools import JujuTools
-
-import pytest
+import pytest_asyncio
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 def event_loop():
     """Override the default pytest event loop.
 
@@ -37,7 +35,7 @@ def event_loop():
     asyncio.set_event_loop(None)
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def controller():
     """Connect to the current controller."""
     _controller = Controller()
@@ -46,7 +44,7 @@ async def controller():
     await _controller.disconnect()
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def model(controller):
     """Live only for the duration of the test."""
     model_name = "functest-{}".format(str(uuid.uuid4())[-12:])
@@ -67,7 +65,7 @@ async def model(controller):
             await asyncio.sleep(1)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def get_unit(model):
     """Return the requested <app_name>/<unit_number> unit."""  # noqa D202
 
@@ -81,7 +79,7 @@ async def get_unit(model):
     return _get_unit
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def run_command(get_unit):
     """Run a command on a unit.
 
@@ -92,12 +90,13 @@ async def run_command(get_unit):
     async def _run_command(cmd, target):
         unit = target if type(target) is juju.unit.Unit else await get_unit(target)
         action = await unit.run(cmd)
+        await action.wait()
         return action.results
 
     return _run_command
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def get_app(model):
     """Return the application by name in the model."""  # noqa D202
 
@@ -110,7 +109,7 @@ async def get_app(model):
     return _get_app
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def file_contents(run_command):
     """Return the contents of a file.
 
@@ -121,12 +120,12 @@ async def file_contents(run_command):
     async def _file_contents(path, target):
         cmd = "cat {}".format(path)
         results = await run_command(cmd, target)
-        return results["Stdout"]
+        return results["stdout"]
 
     return _file_contents
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def file_exists(run_command):
     """Return 1 or 0 based on if file exists or not in target unit.
 
@@ -137,12 +136,12 @@ async def file_exists(run_command):
     async def _file_exists(path, target):
         cmd = '[ -f "{}" ] && echo 1 || echo 0'.format(path)
         results = await run_command(cmd, target)
-        return results["Stdout"]
+        return results["stdout"]
 
     return _file_exists
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def reconfigure_app(get_app, model):
     """Apply a different config to the requested app."""  # noqa D202
 
@@ -157,10 +156,3 @@ async def reconfigure_app(get_app, model):
         await model.block_until(lambda: application.status == "active")
 
     return _reconfigure_app
-
-
-@pytest.fixture(scope="module")
-async def jujutools(controller, model):
-    """Juju tools."""
-    tools = JujuTools(controller, model)
-    return tools
