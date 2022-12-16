@@ -1,5 +1,6 @@
 """Main module for functional testing."""
 
+import asyncio
 import json
 import os
 
@@ -103,6 +104,9 @@ async def test_juju_routing(cfg, file_contents, file_exists, deploy_app, model):
         ),
         timeout=300,
     )
+
+    # NOTE(gabrielcocenza) files might take more time to be rendered.
+    await asyncio.sleep(10)
 
     common_path = "/usr/local/lib/juju-charm-advanced-routing"
     up_path = "{}/if-up/95-juju_routing".format(common_path)
