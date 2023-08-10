@@ -7,13 +7,6 @@ Charm supports IPv4 addressing.
 
 **Warning:** if configured incorrectly, this has the potential to disrupt your units networking setup. Be sure to test your configuration before rolling it out to production. Note the charm provides an apply-changes action, which allows you to apply routing changes per unit as a way to mitigate risk
 
-# Build
-
-```
-cd charm-advanced-routing
-make build
-```
-
 # Usage
 
 Add to an existing application using juju-info relation.
@@ -21,7 +14,7 @@ Add to an existing application using juju-info relation.
 Example:
 
 ```
-juju deploy cs:advanced-routing
+juju deploy advanced-routing
 juju add-relation ubuntu advanced-routing
 ```
 
@@ -243,7 +236,7 @@ ubuntu/0*              active    idle       127      10.0.8.155                 
 
 ## Deploy advanced-routing charm
 
-* `juju deploy cs:advanced-routing`
+* `juju deploy advanced-routing`
 * `juju add-relation ubuntu advanced-routing`
 
 Advanced-routing is in status blocked with message: "Please disable charm-policy-routing"
@@ -296,18 +289,24 @@ Using the action apply-changes, add the routes using the advance-routing charm
 juju run-action advanced-routing/0 apply-changes --wait
 ```
 
-# Testing
+# Build and Testing
+
+To build the charm locally:
+
+```
+make build
+```
 
 To run lint tests:
 
 ```bash
-tox -e lint
+make lint
 ```
 
 To run unit tests:
 
 ```bash
-tox -e unit
+make unittests
 ```
 
 Functional tests have been developed using python-libjuju, deploying a simple ubuntu charm and adding the charm as a subordinate.
@@ -315,7 +314,13 @@ Functional tests have been developed using python-libjuju, deploying a simple ub
 To run tests using python-libjuju:
 
 ```bash
-tox -e func
+make functional
+```
+
+To run the complete test suite (lint tests, unit tests, functional test)
+
+```bash
+make test
 ```
 
 # Contact Information
