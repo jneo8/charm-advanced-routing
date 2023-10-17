@@ -27,6 +27,9 @@ class AdvancedRoutingHelper:
     netplan_up_dir_path = pathlib.Path("/etc/networkd-dispatcher/routable.d")
     policy_routing_service_dir_path = pathlib.Path("/etc/systemd/system")
     table_name_path = pathlib.Path("/etc/iproute2/rt_tables.d/juju-managed.conf")
+    networkd_conf_path = pathlib.Path(
+        "/usr/lib/systemd/networkd.conf.d/95-juju-networkd.conf"
+    )
 
     def __init__(self):
         """Init function."""
@@ -105,6 +108,7 @@ class AdvancedRoutingHelper:
             cleanup_file.write("ip route flush cache\n")
         os.chmod(str(self.common_cleanup_path), 0o755)
 
+        self.setup_persistent_rules()
         self.post_setup()
 
     def apply_config(self):
@@ -150,6 +154,22 @@ class AdvancedRoutingHelper:
                 os.symlink(target, link_name)
             else:
                 raise e
+
+    def setup_persistent_rules(self):
+        """Modify systemd config to not delete foreign rules."""
+        hookenv.log("Changing networkd configuration", level=hookenv.INFO)
+        conf_parent = self.networkd_conf_path.parent
+        if not conf_parent.exists():
+            conf_parent.mkdir(parents=True)
+            hookenv.log("Created {}".format(conf_parent), level=hookenv.INFO)
+        config = (
+            "# This file is managed by Juju.\n"
+            "[Network]\n"
+            "ManageForeignRoutingPolicyRules=no\n"
+            "ManageForeignRoutes=no\n"
+        )
+        with open(str(self.networkd_conf_path), "w") as config_file:
+            config_file.write(config)
 
     @property
     def etc_ifup_path(self):

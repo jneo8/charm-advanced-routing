@@ -11,9 +11,10 @@ class TestAdvancedRoutingHelper:
     """Main test class."""
 
     test_dir = pathlib.Path("/tmp/test/charm-advanced-routing")
-    test_ifup_path = test_dir / "symlink_test" / "ifup"
+    test_networkd_conf_path = test_dir / "networkd.conf.d" / "juju-networkd.conf"
     test_netplanup_path = test_dir / "symlink_test" / "netplanup"
     test_cleanup_path = test_dir / "symlink_test" / "netplandown"
+    test_ifup_path = test_dir / "symlink_test" / "ifup"
     test_script = "test-script"
 
     @classmethod
@@ -64,6 +65,7 @@ class TestAdvancedRoutingHelper:
         test_obj.routing_script_name = self.test_script
         test_obj.common_ifup_path = self.test_dir / "if-up" / self.test_script
         test_obj.common_cleanup_path = self.test_dir / "cleanup" / self.test_script
+        test_obj.networkd_conf_path = self.test_networkd_conf_path
 
         test_obj.post_setup = noop
         routing_validator.RoutingConfigValidator.__init__ = mock.Mock(return_value=None)
@@ -119,3 +121,12 @@ class TestAdvancedRoutingHelper:
         # link it again
         test_obj.symlink_force(target, link)
         assert link.exists()
+
+    def test_setup_persistent_rules(self, advanced_routing_helper):
+        """Test setup_persistent_rules."""
+        test_obj = advanced_routing_helper
+        test_obj.networkd_conf_path = self.test_networkd_conf_path
+
+        test_obj.setup_persistent_rules()
+
+        assert test_obj.networkd_conf_path.exists()
